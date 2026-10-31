@@ -1,0 +1,5 @@
+These pictures are generated: see "The pictures" in the README.
+
+- banner.svg, architecture.svg, race.svg: tools/art/build_art.py. Lettering: Caveat, SIL Open Font License 1.1 (tools/art/fonts/OFL.txt), embedded in each file.
+- app-*.png, result-dialog.png, sheet-sample.png: tools/art/make_screenshots.py, photographing `results-race demo`.
+  Every name, roll number and result in them is made up. No real logo, student or site appears.
