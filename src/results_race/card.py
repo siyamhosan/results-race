@@ -81,6 +81,9 @@ table{width:100%;border-collapse:collapse}th{background:#0b3d2e;color:#fff;font-
 td{padding:4.6px 10px;border-bottom:1px solid #e1e8e5}tr:nth-child(even) td{background:#f5f9f7}td.c,th.c{text-align:center}
 td.code{color:#53636f;width:62px;white-space:nowrap}.conv{font-size:11px;color:#53636f;text-align:right;margin-top:6px}.conv b{color:#1d2a33}
 .f4{font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#006a4e;border:1px solid #006a4e;border-radius:3px;padding:0 4px;margin-left:6px}td.gr{font-weight:600;width:84px}td.pt{width:110px}
+.roomy td{padding:10.5px 10px;font-size:14.5px}.roomy th{padding:9px 10px}.roomy .kv>div{padding:9px 0 10px}.roomy .body{gap:20px}.roomy .strip>div{padding:15px 18px 16px}.roomy .strip>div:first-child{padding-left:2px}
+.roomy .scale{margin-top:2px}
+@media print{html,body{width:210mm;height:297mm;overflow:hidden}.page{height:1122px;break-after:avoid;break-inside:avoid}}
 .dense td{padding:3px 10px;font-size:12.5px}.dense .kv>div{padding:4px 0 5px}
 .sub td{background:#e6f0eb!important;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#0b3d2e;padding:4px 10px}
 .scale{font-size:10px;color:#53636f;display:flex;justify-content:space-between}
@@ -146,7 +149,7 @@ def render(rec, exam, year, style=None):
     tick = '<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=3 stroke-linecap=round stroke-linejoin=round><circle cx=12 cy=12 r=10.5 stroke-width=2 /><path d="M7 12.5l3.2 3.2L17 8.8"/></svg>'
     cross = '<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=3 stroke-linecap=round><circle cx=12 cy=12 r=10.5 stroke-width=2 /><path d="M8 8l8 8M16 8l-8 8"/></svg>'
     return f"""<!doctype html><meta charset=utf-8><meta name=viewport content="width=794"><style>{CSS}</style>
-<div class="page{' dense' if n_rows > 12 else ''}"><div class=top></div>{f'<img class=wm src="{style.board_logo}" alt="">' if style.board_logo else ''}
+<div class="page{' dense' if n_rows > 12 else ' roomy' if n_rows <= 9 else ''}"><div class=top></div>{f'<img class=wm src="{style.board_logo}" alt="">' if style.board_logo else ''}
 <div class=head>{f'<img src="{style.seal}" alt="">' if style.seal else '<span></span>'}<div class=c>
 <div class=gov>{e(style.header_line)}</div>
 <h1 class=serif>{e(style.board_title)}</h1><h2>{e((r.get("board_name") or "").upper())}</h2></div>
