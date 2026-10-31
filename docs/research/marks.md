@@ -1,5 +1,13 @@
 # Can we get per-subject marks from the Bangladesh board result sites?
 
+## Outcome (confirmed with real responses)
+
+Marks **are** public for HSC 2026: a real `/v2/getres` answer carried `showmarks: 1` and `display_details` entries like
+`101-102:171=A+` (two papers sharing one code, total, then grade), plus `tot_full`, `conv_1000` and `sub4th`.
+SSC 2024 answers had `showmarks: 0` and grades only. The sheet now reads and shows the marks (`card.parse_entry`).
+The sections below were written before this was confirmed and say it was unknown.
+
+
 Researched 2026-10-31. Method: loaded the pages in a normal headless Chromium (a JS "Verifying you are not a robot"
 interstitial blocks plain curl; a normal browser passes it by itself, nothing was bypassed), read the page's
 inline JavaScript and form controls. No captcha was solved and **no lookup was submitted**, so no real response
