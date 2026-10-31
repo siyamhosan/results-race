@@ -8,6 +8,7 @@ from results_race.cdp import Browser
 
 class EmptyConnection:
     """A websocket that closes straight away, like a browser that has died."""
+    close_code, close_reason = 1006, ""
 
     def __aiter__(self):
         return self
@@ -29,14 +30,18 @@ class HangingConnection:
 def browser():
     b = Browser()
     b.ws, b.waiters, b.listeners = EmptyConnection(), {}, {}
+    b.proc = mock.Mock()
+    b.proc.poll.return_value = None  # the process is still running when the connection drops
     return b
 
 
 class ConnectionTest(unittest.IsolatedAsyncioTestCase):
     async def test_a_lost_browser_ends_the_app_with_an_error_exit(self):
         with mock.patch("results_race.cdp.os._exit") as exit_:
-            await browser()._read()
+            b = browser()
+            await b._read()
         exit_.assert_called_once_with(1)
+        b.proc.terminate.assert_called_once()  # os._exit skips atexit: the browser must be stopped first
 
     async def test_closing_it_on_purpose_does_not(self):
         b = browser()

@@ -35,7 +35,7 @@ class Browser:
                 break
             except Exception:
                 await asyncio.sleep(0.2)
-        self.ws = await websockets.connect(url, max_size=None)
+        self.ws = await websockets.connect(url, max_size=None, ping_interval=None)  # no keepalive pings: a Chromium busy with slow sites can miss one, and the connection would be dropped while the browser is fine
         self.n, self.waiters, self.listeners = 0, {}, {}
         self.reader = asyncio.create_task(self._read())
 
@@ -50,11 +50,14 @@ class Browser:
                         asyncio.create_task(cb(m["params"]))
         except asyncio.CancelledError:
             raise  # we are being shut down: that is not the browser's doing
-        except Exception:  # noqa: BLE001 - a broken connection counts as a lost browser, like a closed one
-            pass
+        except Exception as e:  # noqa: BLE001 - a broken connection counts as a lost browser, like a closed one
+            why = repr(e)
+        else:
+            why = f"closed ({self.ws.close_code} {self.ws.close_reason or ''})".strip()
         if not self.closing:
             # the browser is gone and every lane with it: fail fast so the supervisor (pm2) restarts us cleanly
-            print("lost the browser connection - exiting", flush=True)
+            print(f"lost the browser connection ({why}; browser {'still running' if self.proc.poll() is None else 'exited'}) - exiting", flush=True)
+            self._shutdown()  # os._exit skips atexit: without this a still-running Chromium is left behind, holding gigabytes
             os._exit(1)
 
     async def call(self, method, session=None, **params):
