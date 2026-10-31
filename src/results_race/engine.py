@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .card import render
 from .config import DEFAULT_SITES
+from .naming import png_filename, unique_names
 
 SITES = DEFAULT_SITES
 DEFAULT_PATHS = {"home": "/v2/home", "captcha": "/v2/captcha", "result": "/v2/getres"}
@@ -55,13 +56,17 @@ class Student:
         self.reset()
 
     def reset(self):
-        self.status, self.msg, self.site, self.ms, self.name, self.gpa = "pending", "", "", 0, "", ""
+        self.status, self.msg, self.site, self.ms, self.name, self.gpa, self.res_detail = "pending", "", "", 0, "", "", ""
         self.inflight, self.attempt, self.first_t, self.avoid = 0, 0, 0.0, set()
+
+    def png_name(self):
+        return png_filename(self.name, self.res_detail, self.roll)
 
     def view(self):
         return {"id": self.id, "manual": self.manual, "exam": self.exam, "year": self.year,
                 "roll": self.roll, "reg": self.reg, "status": self.status, "msg": self.msg, "site": self.site, "ms": self.ms,
-                "name": self.name, "gpa": self.gpa}
+                "name": self.name, "gpa": self.gpa,
+                "png_name": self.png_name() if self.status == "done" else ""}
 
 
 class Lane:
@@ -172,6 +177,7 @@ class Engine:
         self.browser, self.cfg, self.out = browser, cfg, Path(out_dir)
         self.hedge_s, self.timeout_s = hedge_s, timeout_s
         self.warmup_parallel, self.warmup_wait_s = warmup_parallel, warmup_wait_s
+        self._png_cache = {}  # student id -> ((mtime, size, scale), png): rendering costs about a second
         self.card_style, self.card_enabled, self.png_scale, self.allow_manual = card_style, card_enabled, png_scale, allow_manual
         self.students = [Student(*s) for s in students]
         self.lanes = lanes if lanes is not None else build_lanes(browser, sites or SITES, lanes_per_site, list(proxies), paths)
@@ -213,7 +219,8 @@ class Engine:
     def _fill(stu, rec):
         res = rec.get("result", {}).get("res", {})
         stu.ms, stu.site = rec.get("ms", 0), rec.get("site", "")
-        stu.name, stu.gpa = res.get("name", ""), (res.get("res_detail") or "").replace("GPA=", "")
+        stu.res_detail = res.get("res_detail") or ""
+        stu.name, stu.gpa = res.get("name", ""), stu.res_detail.replace("GPA=", "")
 
     async def run(self):
         """Start the lanes - all at once, or in batches of `warmup_parallel` (each browser session costs memory, so
@@ -298,27 +305,53 @@ class Engine:
         await (lane.fail(str(data)) if kind == "site_error" else lane.refresh())
 
     def card_html(self, sid):
-        stu = next((s for s in self.students if s.id == sid), None)  # lookup, never a path built from the request
+        stu = self._student(sid)
         if not self.card_enabled or not stu or not self.path(stu).exists():
             return None
         rec = json.loads(self.path(stu).read_text())
         return render(rec, rec.get("exam", self.cfg["exam"]), rec.get("year", self.cfg["year"]), self.card_style)
 
+    def _student(self, sid):
+        return next((s for s in self.students if s.id == sid), None)  # a lookup, never a path built from a request
+
+    def png_name(self, sid):
+        """e.g. Md-Rahim-Uddin_GPA-4.22_100001.png - or None while the student has no result."""
+        stu = self._student(sid)
+        return stu.png_name() if stu and stu.status == "done" else None
+
     async def card_png(self, sid, scale=None):
-        """High-quality PNG: screenshot the A4 card in the headless browser (png_scale x pixel density)."""
-        html = self.card_html(sid)
-        if html is None:
+        """High-quality PNG: screenshot the A4 card in the headless browser (png_scale x pixel density). Cached until
+        the saved result changes."""
+        stu = self._student(sid)
+        if not self.card_enabled or not stu or not self.path(stu).exists():
             return None
+        scale = scale or self.png_scale
+        stat = self.path(stu).stat()
+        key = (stat.st_mtime_ns, stat.st_size, scale)
+        if (hit := self._png_cache.get(sid)) and hit[0] == key:
+            return hit[1]
+        html = self.card_html(sid)
         tab = await self.browser.new_tab("data:text/html;charset=utf-8;base64," + base64.b64encode(html.encode()).decode())
         try:
             await asyncio.sleep(0.7)
-            await tab.call("Emulation.setDeviceMetricsOverride", width=794, height=1123, deviceScaleFactor=scale or self.png_scale, mobile=False)
+            await tab.call("Emulation.setDeviceMetricsOverride", width=794, height=1123, deviceScaleFactor=scale, mobile=False)
             await asyncio.sleep(0.3)
             shot = await tab.call("Page.captureScreenshot", format="png",
                                   clip={"x": 0, "y": 0, "width": 794, "height": 1123, "scale": 1})
-            return base64.b64decode(shot["data"])
+            png = base64.b64decode(shot["data"])
         finally:
             await tab.close()
+        self._png_cache[sid] = (key, png)
+        return png
+
+    async def card_png_all(self):
+        """[(file name, png)] for every finished student, in list order, one at a time (each render opens a browser tab).
+        Names are taken up front and a result that vanishes meanwhile (e.g. Reset all) is skipped, not fatal."""
+        if not self.card_enabled:
+            return []
+        ready = [(s.id, s.png_name()) for s in self.students if s.status == "done" and self.path(s).exists()]
+        rendered = [(name, png) for sid, name in ready if (png := await self.card_png(sid)) is not None]
+        return list(zip(unique_names([n for n, _ in rendered]), [p for _, p in rendered]))
 
     def reset(self, everything=False):
         """Failed -> pending; with everything, also forget saved results (files deleted) so a test can rerun."""

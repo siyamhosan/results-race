@@ -9,10 +9,20 @@ import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
+import io
+import zipfile
+from pathlib import Path
+
+from fakes import FakeBrowser
 from results_race.config import Config
 from results_race.engine import Engine
 from results_race.server import App, render_page
 from test_hedge import FakeLane
+
+
+def OK(name, gpa):
+    return ("ok", {"status": 0, "res": {"name": name, "res_detail": gpa, "board_name": "B", "roll_no": "111",
+                                         "display_details": "101:A"}, "sub_details": []})
 
 
 def basic(user, pw):
@@ -20,31 +30,45 @@ def basic(user, pw):
 
 
 class Fixture:
-    def __init__(self, cfg=None, **engine_kw):
+    def __init__(self, cfg=None, browser=None, outcome=None, **engine_kw):
         self.cfg = cfg or Config()
         self.loop = asyncio.new_event_loop()
         self.loop_thread = threading.Thread(target=self.loop.run_forever, daemon=True)
         self.loop_thread.start()
-        self.engine = Engine(None, [("111", "9")], {"board": "b", "exam": "ssc", "year": "2024"}, tempfile.mkdtemp(),
-                             lanes=[FakeLane("a", "https://a.test")], hedge_s=1, timeout_s=1, **engine_kw)
+        lane = FakeLane("a", "https://a.test", **({"outcome": outcome} if outcome else {}))
+        self.engine = Engine(browser, [("111", "9"), ("222", "8")], {"board": "b", "exam": "ssc", "year": "2024"}, tempfile.mkdtemp(),
+                             lanes=[lane], hedge_s=1, timeout_s=1, **engine_kw)
         self.app = App(self.cfg, self.engine, self.loop)
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), self.app.handler())
         self.http_thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.http_thread.start()
         self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
 
-    def call(self, path, body=None, headers=None):
+    def call(self, path, body=None, headers=None, with_headers=False, timeout=5):
         req = urllib.request.Request(self.base + path, data=None if body is None else json.dumps(body).encode(), headers=headers or {})
         try:
-            with urllib.request.urlopen(req, timeout=5) as r:
-                return r.status, r.read()
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return (r.status, r.read(), dict(r.headers)) if with_headers else (r.status, r.read())
         except urllib.error.HTTPError as e:
-            return e.code, e.read()
+            return (e.code, e.read(), dict(e.headers)) if with_headers else (e.code, e.read())
+
+    def finish(self, sid):
+        """Give a student a saved result, the way a lookup would."""
+        self.engine.lanes[0].status = "ready"
+        self.loop.call_soon_threadsafe(self.engine.solve, "a", sid, "1234")
+        for _ in range(100):
+            if next(s for s in self.engine.students if s.id == sid).status == "done":
+                return
+            threading.Event().wait(0.02)
 
     def close(self):
         self.httpd.shutdown()
         self.httpd.server_close()
         self.http_thread.join(5)
+        async def cancel_pending():
+            for task in asyncio.all_tasks() - {asyncio.current_task()}:
+                task.cancel()
+        asyncio.run_coroutine_threadsafe(cancel_pending(), self.loop).result(5)
         self.loop.call_soon_threadsafe(self.loop.stop)
         self.loop_thread.join(5)
         self.loop.close()
@@ -58,7 +82,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIn(b"Results race", body)
         state = json.loads(f.call("/state")[1])
-        self.assertEqual([s["roll"] for s in state["students"]], ["111"])
+        self.assertEqual([s["roll"] for s in state["students"]], ["111", "222"])
         self.assertEqual(state["offer"]["lane"], "a")
 
     def test_title_theme_and_captcha_length_come_from_configuration(self):
@@ -103,6 +127,53 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(f.call("/result/111")[0], 404)
         self.assertEqual(f.call("/png/111")[0], 404)
         self.assertFalse(json.loads(f.call("/state")[1])["card"])
+
+    def test_png_download_is_named_after_the_student_and_result(self):
+        f = Fixture(browser=FakeBrowser(), outcome=OK("RAHIM UDDIN AHMED", "GPA=4.22"))
+        self.addCleanup(f.close)
+        f.finish("111")
+        code, body, headers = f.call("/png/111", with_headers=True, timeout=20)
+        self.assertEqual(code, 200)
+        self.assertTrue(body.startswith(b"PNG:"))
+        self.assertIn('filename="Rahim-Uddin-Ahmed_GPA-4.22_111.png"', headers["Content-Disposition"])
+
+    def test_download_all_is_a_zip_of_every_finished_students_png(self):
+        f = Fixture(browser=FakeBrowser(), outcome=OK("RAHIM UDDIN AHMED", "GPA=4.22"))
+        self.addCleanup(f.close)
+        f.finish("111")  # 222 stays pending
+        code, body, headers = f.call("/png-all", with_headers=True, timeout=30)
+        self.assertEqual((code, headers["Content-Type"]), (200, "application/zip"))
+        self.assertIn("-A4-PNGs.zip", headers["Content-Disposition"])
+        with zipfile.ZipFile(io.BytesIO(body)) as z:
+            self.assertIsNone(z.testzip())
+            self.assertEqual(z.namelist(), ["Rahim-Uddin-Ahmed_GPA-4.22_111.png"])
+            self.assertTrue(z.read(z.namelist()[0]).startswith(b"PNG:"))
+
+    def test_download_all_with_nothing_finished_or_the_sheet_off_is_a_404(self):
+        f = Fixture(browser=FakeBrowser())
+        self.addCleanup(f.close)
+        self.assertEqual(f.call("/png-all")[0], 404)
+        off = Fixture(browser=FakeBrowser(), outcome=OK("X", "GPA=4.00"), card_enabled=False)
+        self.addCleanup(off.close)
+        off.finish("111")
+        self.assertEqual(off.call("/png-all")[0], 404)
+
+    def test_a_failing_render_is_a_clean_error_not_a_dropped_connection(self):
+        class BrokenBrowser(FakeBrowser):
+            async def new_tab(self, url, proxy=None):
+                raise RuntimeError("browser exploded")
+        f = Fixture(browser=BrokenBrowser(), outcome=OK("X", "GPA=4.00"))
+        self.addCleanup(f.close)
+        f.finish("111")
+        self.assertEqual(f.call("/png-all", timeout=20)[0], 500)
+        self.assertEqual(f.call("/png/111", timeout=20)[0], 500)
+
+    def test_download_all_needs_the_login_too(self):
+        cfg = Config()
+        cfg.server.auth = "me:pw"
+        f = Fixture(cfg, browser=FakeBrowser(), outcome=OK("X", "GPA=4.00"))
+        self.addCleanup(f.close)
+        self.assertEqual(f.call("/png-all")[0], 401)
 
     def test_reload_lanes_endpoint(self):
         f = Fixture()

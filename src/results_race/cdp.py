@@ -48,11 +48,14 @@ class Browser:
                 elif "method" in m:
                     for cb in self.listeners.get((m.get("sessionId"), m["method"]), []):
                         asyncio.create_task(cb(m["params"]))
-        finally:
-            if not self.closing:
-                # the browser is gone and every lane with it: fail fast so the supervisor (pm2) restarts us cleanly
-                print("lost the browser connection - exiting", flush=True)
-                os._exit(1)
+        except asyncio.CancelledError:
+            raise  # we are being shut down: that is not the browser's doing
+        except Exception:  # noqa: BLE001 - a broken connection counts as a lost browser, like a closed one
+            pass
+        if not self.closing:
+            # the browser is gone and every lane with it: fail fast so the supervisor (pm2) restarts us cleanly
+            print("lost the browser connection - exiting", flush=True)
+            os._exit(1)
 
     async def call(self, method, session=None, **params):
         self.n += 1

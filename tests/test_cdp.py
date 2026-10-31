@@ -16,6 +16,16 @@ class EmptyConnection:
         raise StopAsyncIteration
 
 
+class HangingConnection:
+    """A connection that is simply quiet: nothing arrives, nothing closes."""
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await asyncio.Event().wait()
+
+
 def browser():
     b = Browser()
     b.ws, b.waiters, b.listeners = EmptyConnection(), {}, {}
@@ -33,6 +43,17 @@ class ConnectionTest(unittest.IsolatedAsyncioTestCase):
         b.closing = True
         with mock.patch("results_race.cdp.os._exit") as exit_:
             await b._read()
+        exit_.assert_not_called()
+
+    async def test_being_cancelled_at_shutdown_is_not_a_lost_browser(self):
+        b = browser()
+        b.ws = HangingConnection()
+        task = asyncio.create_task(b._read())
+        await asyncio.sleep(0.01)
+        with mock.patch("results_race.cdp.os._exit") as exit_:
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
         exit_.assert_not_called()
 
     async def test_close_marks_it_so_the_reader_stays_quiet(self):

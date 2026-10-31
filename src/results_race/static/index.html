@@ -31,7 +31,7 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 .chip{height:24px;font-size:11.5px;padding:0 9px;border-radius:99px;background:var(--idle);display:flex;gap:6px;align-items:center;white-space:nowrap}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--mut)}.chip.ready .dot{background:var(--ok)}.chip.busy .dot,.chip.warming .dot{background:#e0a100}.chip.cooldown .dot{background:var(--bad)}
 .list{height:604px;display:flex;flex-direction:column;padding:12px}
-.tabs{display:flex;gap:6px;height:38px;flex:none;overflow-x:auto}.tab{height:32px;font-size:13px;border-radius:99px;font-weight:600}.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.listhead{display:flex;gap:8px;align-items:flex-start;height:38px;flex:none}#allBtn{flex:none;height:32px;font-size:13px;padding:0 12px}#allBtn b{background:var(--idle);border-radius:99px;padding:1px 8px;font-size:12px;min-width:22px;text-align:center}#allBtn .sm{display:none}#allBtn[data-busy] span{display:none}#allBtn[data-busy]:before{content:"Rendering…"}.tabs{display:flex;gap:6px;height:38px;flex:1;min-width:0;overflow-x:auto}.tab{height:32px;font-size:13px;border-radius:99px;font-weight:600}.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .rows{flex:1;overflow-y:auto;margin-top:8px;scrollbar-gutter:stable}
 .s{display:grid;grid-template-columns:minmax(0,1fr) 112px 56px;grid-template-rows:24px 20px;gap:0 10px;align-items:center;height:58px;padding:7px 10px;border-radius:12px}
 .s.done{cursor:pointer}.s.done:hover,.s.done:focus-visible{background:var(--idle);outline:none}
@@ -54,8 +54,8 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 .addbox input:focus,.addbox select:focus{border-color:var(--brand);outline:none}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.err{height:18px;font-size:13px;color:var(--bad)}.row{display:flex;gap:8px;justify-content:flex-end}
 .addbox code{background:var(--idle);padding:1px 5px;border-radius:5px}.mtag{flex:none;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--warnbg);color:var(--warn)}
 .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:99;font-size:14px;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0)}
-@media(max-width:820px){header{height:auto;min-height:52px;align-items:flex-start;padding-bottom:2px}header .actions button{height:34px;padding:0 10px;font-size:12.5px}.wrap{padding:12px}.grid{grid-template-columns:1fr}.entry{position:static;height:auto}.chips{margin-top:12px;height:76px}.list{height:480px}.stats{grid-template-columns:repeat(2,1fr)}
-.brand h1,.brand small{display:none}button,.btn{padding:0 11px;font-size:13px}.stat b{font-size:22px}
+@media(max-width:820px){header{height:auto;min-height:52px;align-items:flex-start;padding-bottom:2px}header .actions button{height:34px;padding:0 10px;font-size:12.5px}.wrap{padding:12px}.grid{grid-template-columns:minmax(0,1fr)}.card{min-width:0}.s{grid-template-columns:minmax(0,1fr) 96px}.s .time{display:none}.s .r em{min-width:7ch}.entry{position:static;height:auto}.chips{margin-top:12px;height:76px}.list{height:480px}.stats{grid-template-columns:repeat(2,1fr)}
+.brand h1,.brand small{display:none}#allBtn .lg{display:none}#allBtn:not([data-busy]) .sm{display:inline}button,.btn{padding:0 11px;font-size:13px}.stat b{font-size:22px}
 #modal{padding:0;align-items:stretch}.dialog{width:100%;height:100dvh;border-radius:0;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
 .preview{padding:8px}.side{border-left:0;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:8px;overflow:visible}
 .side h3{font-size:15px;padding-right:44px}.side .roll{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.kpi{padding:6px 10px}.kpi b{font-size:15px}.kpi:nth-child(n+3){display:none}
@@ -79,7 +79,7 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 <button id=newcap onclick="newCaptcha()" style="width:100%;margin-bottom:8px">New captcha</button>
 <input id=cap autofocus inputmode=numeric autocomplete=off placeholder="digits" aria-label="Captcha digits">
 <div class=hint>Enter to submit · Esc for a new captcha</div><div class=chips id=chips></div></div>
-<div class="card list"><div class=tabs id=tabs></div><div class=rows id=stu></div></div></div></div>
+<div class="card list"><div class=listhead><div class=tabs id=tabs></div><button id=allBtn onclick="dlAll()" title="Every finished student's A4 sheet as a PNG, in one zip"><span class=lg>Download all A4 PNGs</span><span class=sm>All PNGs</span> <b id=allN>0</b></button></div><div class=rows id=stu></div></div></div></div>
 <div id=modal role=dialog aria-modal=true aria-labelledby=mName onclick="if(event.target==modal)closeM()"><div class=dialog>
 <div class=preview id=paper><div id=pw><div class=skel id=skel></div><iframe id=frame title="Result sheet"></iframe></div></div>
 <aside class=side><button class="icon x" onclick="closeM()" aria-label="Close"><svg width=16 height=16 viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2.4 stroke-linecap=round><path d="M5 5l14 14M19 5L5 19"/></svg></button>
@@ -116,9 +116,17 @@ function openResult(r){openRoll=r;const t0=performance.now(),s=data.students.fin
   frame.src='/result/'+r;document.body.classList.add('lock');$('modal').classList.add('on');fit();$('dl').focus()}
 function closeM(){$('modal').classList.remove('on');document.body.classList.remove('lock');cap.focus()}
 function step(d){const L=doneList(),i=L.findIndex(x=>x.id==openRoll);if(L.length)openResult(L[(i+d+L.length)%L.length].id)}
+function fileNameOf(r,fallback){const h=r.headers.get('Content-Disposition')||'',m=h.match(/filename\*=UTF-8''([^;]+)/i);
+  if(m){try{return decodeURIComponent(m[1])}catch(e){}}const n=h.match(/filename="([^"]+)"/i);return n?n[1]:fallback}
+function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+async function dlAll(){const b=$('allBtn'),n=doneList().length,t0=performance.now();if(!n||b.disabled)return;b.disabled=true;b.dataset.busy=1;
+  toast(`Rendering ${n} A4 sheet${n>1?'s':''} - about ${Math.ceil(n*1.3)} s`,Math.max(2600,n*1300));
+  try{const r=await fetch('/png-all');if(!r.ok)throw 0;const name=fileNameOf(r,'results-A4-PNGs.zip');save(await r.blob(),name);
+    toast(`Saved ${n} A4 PNG${n>1?'s':''} in ${name} · ${((performance.now()-t0)/1000).toFixed(1)}s`,4500)}
+  catch(e){toast('Could not create the PNGs')}delete b.dataset.busy;b.disabled=false}
 async function dlPng(){const b=$('dl'),t0=performance.now(),old=b.textContent;b.disabled=true;b.textContent='Rendering…';
-  try{const r=await fetch('/png/'+openRoll);if(!r.ok)throw 0;const blob=await r.blob(),a=document.createElement('a'),ms=Math.round(performance.now()-t0);
-  a.href=URL.createObjectURL(blob);a.download=`result-${openRoll}.png`;a.click();$('kPng').textContent=sec(ms);toast(`PNG saved · A4 · 2382×3369 · ${sec(ms)}`)}
+  try{const r=await fetch('/png/'+openRoll);if(!r.ok)throw 0;const name=fileNameOf(r,`result-${openRoll}.png`),blob=await r.blob(),ms=Math.round(performance.now()-t0);
+  save(blob,name);$('kPng').textContent=sec(ms);toast(`Saved ${name} · ${sec(ms)}`,4000)}
   catch(e){toast('Could not create the PNG')}b.disabled=false;b.textContent=old}
 function openAdd(){const c=data&&data.cfg||{};$('aExam').value=c.exam||'ssc';$('aYear').value=c.year||'';$('aErr').textContent='';$('addm').classList.add('on');document.body.classList.add('lock');$('aRoll').focus()}
 function closeAdd(){$('addm').classList.remove('on');if(!$('modal').classList.contains('on'))document.body.classList.remove('lock');cap.focus()}
@@ -132,7 +140,7 @@ async function resetAll(){if(!confirm('Reset everything and delete saved results
   await fetch('/reset',{method:'POST',body:JSON.stringify({all:true})});poll()}
 const match=(s,k)=>k=='all'||(k=='pending'?['pending','inflight'].includes(s.status):s.status==k);
 function setFilter(f){filter=f;render()}
-function render(){const st=data,S=st.students;$('addBtn').style.display=st.can_add?'':'none';const n=k=>S.filter(s=>match(s,k)).length;
+function render(){const st=data,S=st.students;$('addBtn').style.display=st.can_add?'':'none';const n=k=>S.filter(s=>match(s,k)).length;$('allBtn').style.display=st.card?'':'none';$('allN').textContent=S.filter(s=>s.status=='done').length;$('allBtn').disabled=!!$('allBtn').dataset.busy||!S.some(s=>s.status=='done');
   $('tabs').innerHTML=['all','done','pending','failed'].map(k=>`<button class="tab ${filter==k?'on':''}" onclick="setFilter('${k}')">${k[0].toUpperCase()+k.slice(1)} ${n(k)}</button>`).join('');
   $('stu').innerHTML=S.filter(s=>match(s,filter)).map(s=>{
     const label=s.status=='done'?(data.card?'View result':'Done'):s.status=='inflight'?'Fetching…':s.status=='pending'&&s.msg?'Switch lane':s.status[0].toUpperCase()+s.status.slice(1);

@@ -55,6 +55,7 @@ It works with no config at all: it starts empty and you add students with **Add 
 | **Add student** | look someone up for any exam and year; saved separately |
 | **Reset failed** / **Reset all** | requeue failures / forget everything and delete saved results |
 | click a finished student | the A4 sheet, with PNG download and print |
+| **Download all A4 PNGs** | one zip with every finished student's A4 PNG (renders are cached, so a second click is instant) |
 
 ## Configuration
 
@@ -128,6 +129,9 @@ out/manual.json                 the list of students added in the page (they com
 Restarting skips anyone already saved. **Reset all** in the page deletes the saved results.
 
 ## The result sheet
+
+Downloaded PNGs are named after the student and the result, e.g. `Md-Rahim-Uddin_GPA-4.22_100001.png`
+(`..._Not-Passed_...` for a fail). Non-Latin names are kept, and the zip never has two files with one name.
 
 Fonts (IBM Plex, OFL) are bundled. The **logos are not**: they are a government's and a board's marks, so each user
 downloads them onto their own machine with `results-race fetch-assets` (sources are configurable under `[card]`).

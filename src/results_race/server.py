@@ -1,17 +1,21 @@
 """The page you type captchas into, and the small JSON API behind it."""
 import asyncio
 import html as htmllib
+import io
 import json
 import subprocess
 import threading
 import time
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .assets import default_dir
 from .auth import authorized
+from .naming import content_disposition
 
 STATIC = Path(__file__).parent / "static"
+FAILED = object()  # a render that failed (the client was already sent a 500)
 
 
 def render_page(cfg):
@@ -46,6 +50,15 @@ class App:
                 self.end_headers()
                 self.wfile.write(body)
 
+            def render(self, coro, timeout):
+                """Run a render on the browser's loop. On failure (browser error, timeout) answer 500 and return FAILED."""
+                try:
+                    return asyncio.run_coroutine_threadsafe(coro, app.loop).result(timeout)
+                except Exception as err:  # noqa: BLE001 - whatever went wrong, the client gets a clean error
+                    print(f"render failed: {err!r}", flush=True)
+                    self.reply(json.dumps({"error": "could not render the sheet"}).encode(), code=500)
+                    return FAILED
+
             def denied(self):
                 """With a login configured, every request must carry it (browsers remember it after the first prompt)."""
                 if not app.cfg.server.auth or authorized(self.headers.get("Authorization"), app.cfg.server.auth):
@@ -73,13 +86,33 @@ class App:
                     self.reply((html or "not found").encode(), "text/html; charset=utf-8", 200 if html else 404)
                 elif path.startswith("/png/") and eng and eng.card_html(path[5:]) is not None:
                     sid, t0 = path[5:], time.time()
-                    png = asyncio.run_coroutine_threadsafe(eng.card_png(sid), app.loop).result(60)
+                    png = self.render(eng.card_png(sid), 60)
+                    if png is FAILED:
+                        return
+                    if png is None:  # the result disappeared since we checked
+                        return self.reply(b"{}", code=404)
                     self.send_response(200)
                     self.send_header("X-Render-Ms", str(int((time.time() - t0) * 1000)))
                     self.send_header("Content-Type", "image/png")
-                    self.send_header("Content-Disposition", f'attachment; filename="result-{Path(sid).name}.png"')
+                    self.send_header("Content-Disposition", content_disposition(eng.png_name(sid) or f"result-{Path(sid).name}.png"))
                     self.end_headers()
                     self.wfile.write(png)
+                elif path == "/png-all" and eng and eng.card_enabled and any(s.status == "done" for s in eng.students):
+                    # every finished student's A4 PNG in one zip (PNGs are already compressed, so just store them)
+                    n = sum(s.status == "done" for s in eng.students)
+                    files = self.render(eng.card_png_all(), 30 * n + 30)
+                    if files is FAILED:
+                        return
+                    buf = io.BytesIO()
+                    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+                        for name, png in files:
+                            z.writestr(name, png)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/zip")
+                    self.send_header("Content-Disposition", content_disposition(f"results-{eng.cfg['exam']}-{eng.cfg['year']}-A4-PNGs.zip"))
+                    self.send_header("Content-Length", str(buf.tell()))
+                    self.end_headers()
+                    self.wfile.write(buf.getvalue())
                 else:
                     self.reply(b"{}", code=404)
 
