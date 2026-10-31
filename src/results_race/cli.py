@@ -1,8 +1,9 @@
-"""Command line: `results-race [run]`, `fetch-assets`, `print-config`, `init-config`."""
+"""Command line: `results-race [run]`, `demo`, `fetch-assets`, `print-config`, `init-config`."""
 import asyncio
 import signal
 import socket
 import sys
+import tempfile
 from pathlib import Path
 
 from . import __version__
@@ -10,6 +11,7 @@ from .assets import default_dir, fetch_assets
 from .card import load_logos
 from .cdp import Browser
 from .config import ConfigError, dump, load
+from .demo import apply_demo
 from .engine import Engine
 from .proxies import load_proxies
 from .server import App
@@ -32,6 +34,24 @@ def lan_address():
         return "this-machine"
 
 
+def card_style(cfg):
+    """How the result sheet looks: the configured texts, plus whichever logos are in the assets folder."""
+    assets = Path(cfg.card.assets_dir) if cfg.card.assets_dir else default_dir()
+    return load_logos(assets, cfg.card.logos, header_line=cfg.card.header_line, board_title=cfg.card.board_title,
+                      sheet_title=cfg.card.sheet_title, footer_note=cfg.card.footer_note, show_fetch_time=cfg.card.show_fetch_time,
+                      credit=cfg.card.credit)
+
+
+def build_engine(cfg, browser, students, proxies, style=None):
+    """The engine for a config: sites, lanes, hedging, and the result sheet's look (`style` if already built)."""
+    return Engine(
+        browser, students, {"board": cfg.run.board, "exam": cfg.run.exam, "year": cfg.run.year, "result_type": cfg.run.result_type},
+        cfg.output.dir, cfg.sites.lanes_per_site, proxies, hedge_s=cfg.hedge.seconds, timeout_s=cfg.hedge.timeout_seconds,
+        sites=cfg.sites.urls, paths={"home": cfg.sites.home_path, "captcha": cfg.sites.captcha_path, "result": cfg.sites.result_path},
+        warmup_parallel=cfg.sites.warmup_parallel, card_style=style or card_style(cfg), card_enabled=cfg.card.enabled,
+        png_scale=cfg.card.png_scale, allow_manual=cfg.students.allow_manual_add)
+
+
 def run(cfg):
     try:
         students = load_students(cfg.students.file)
@@ -41,10 +61,7 @@ def run(cfg):
     except ValueError as e:
         return fail(e)
 
-    assets = Path(cfg.card.assets_dir) if cfg.card.assets_dir else default_dir()
-    style = load_logos(assets, cfg.card.logos, header_line=cfg.card.header_line, sheet_title=cfg.card.sheet_title,
-                       footer_note=cfg.card.footer_note, show_fetch_time=cfg.card.show_fetch_time)
-    run_cfg = {"board": cfg.run.board, "exam": cfg.run.exam, "year": cfg.run.year, "result_type": cfg.run.result_type}
+    style = card_style(cfg)
     app = App(cfg)
     loop = app.loop
     host = cfg.server.host
@@ -54,12 +71,7 @@ def run(cfg):
     async def main():
         browser = Browser()
         await browser.start(path=cfg.browser.path, no_sandbox=cfg.browser.no_sandbox)
-        app.engine = Engine(
-            browser, students, run_cfg, cfg.output.dir, cfg.sites.lanes_per_site, proxies,
-            hedge_s=cfg.hedge.seconds, timeout_s=cfg.hedge.timeout_seconds,
-            sites=cfg.sites.urls, paths={"home": cfg.sites.home_path, "captcha": cfg.sites.captcha_path, "result": cfg.sites.result_path},
-            warmup_parallel=cfg.sites.warmup_parallel,
-            card_style=style, card_enabled=cfg.card.enabled, png_scale=cfg.card.png_scale, allow_manual=cfg.students.allow_manual_add)
+        app.engine = build_engine(cfg, browser, students, proxies, style)
         app.notify_when_ready(url)
         await app.engine.run()
 
@@ -71,7 +83,7 @@ def run(cfg):
         return fail(f"cannot listen on {host}:{cfg.server.port}: {e.strerror}", 1)
     logos = "with logos" if style.seal or style.board_logo else "no logos (run `results-race fetch-assets` to add them)"
     print(f"results-race {__version__}  {url}\n  {len(students)} students, {len(cfg.sites.urls)} sites x {cfg.sites.lanes_per_site}"
-          f" lanes{f' + {len(proxies)} proxies' if proxies else ''}, {run_cfg['exam']} {run_cfg['year']} {run_cfg['board']}, {logos}"
+          f" lanes{f' + {len(proxies)} proxies' if proxies else ''}, {cfg.run.exam} {cfg.run.year} {cfg.run.board}, {logos}"
           f"{', login required' if cfg.server.auth else ''}", flush=True)
     try:
         loop.run_until_complete(main())
@@ -100,4 +112,14 @@ def main(argv=None):
         print(f"downloading logos into {folder}")
         saved = fetch_assets({"seal": cfg.card.seal_url, "board-logo": cfg.card.board_logo_url}, folder)
         return 0 if saved else 1
+    if args.command == "demo":
+        workdir = tempfile.mkdtemp(prefix="results-race-demo-")
+        mirrors = apply_demo(cfg, workdir)
+        print(f"DEMO: fake mirror sites {', '.join(m.name for m in mirrors)} (one is slow on purpose) and made-up students.\n"
+              f"  Read the 4 digits in each captcha picture and type them. Files go to {workdir}")
+        try:
+            return run(cfg)
+        finally:
+            for m in mirrors:
+                m.stop()
     return run(cfg)
