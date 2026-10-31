@@ -84,6 +84,16 @@ class Lane:
         self.img, self.ver, self.fails, self.fetched, self.tab = None, 0, 0, 0.0, None
         self._task = None
 
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        if value != getattr(self, "_status", None):
+            self.since = time.time()  # when it entered this state: the page shows how long a lane has been stuck
+        self._status = value
+
     def start(self):
         self._task = asyncio.create_task(self.warm())
 
@@ -115,7 +125,9 @@ class Lane:
         try:
             self.status = "warming"
             self.tab = self.tab or await self.b.new_tab(self.home_url, self.proxy)
-            for _ in range(int(self.load_s * 4)):  # the site's own bot check redirects to /v2/home once it passes
+            for i in range(int(self.load_s * 4)):  # the site's own bot check redirects to /v2/home once it passes
+                if i >= 5:
+                    self.msg = f"waiting for the site to answer ({int(i * 0.4)}s of {int(self.load_s)}s)"
                 await asyncio.sleep(0.4)
                 if await self.tab.eval(f"location.pathname=={json.dumps(self.paths['home'])}&&!!document.getElementById('form')"):
                     return await self.refresh()
@@ -365,4 +377,5 @@ class Engine:
     def state(self):
         return {"cfg": self.cfg, "card": self.card_enabled, "can_add": self.allow_manual, "students": [s.view() for s in self.students],
                 "lanes": [{"id": l.id, "status": l.status, "msg": l.msg, "ms": int(l.latency * 1000),
+                           "age": int(time.time() - getattr(l, "since", time.time())),
                            "proxy": l.proxy.label if l.proxy else "", "site": l.site} for l in self.lanes]}

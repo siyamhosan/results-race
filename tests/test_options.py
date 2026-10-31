@@ -174,3 +174,13 @@ class ReloadLanesTest(unittest.IsolatedAsyncioTestCase):
 
 
 unittest.main() if __name__ == "__main__" else None
+
+
+class LaneAgeTest(unittest.TestCase):
+    def test_a_lane_knows_how_long_it_has_been_in_its_state(self):
+        lane = Lane(None, "https://one.test", 0)
+        lane.since -= 30
+        eng = Engine(None, [("111", "9")], CFG, tempfile.mkdtemp(), lanes=[lane], timeout_s=1)
+        self.assertGreaterEqual(eng.state()["lanes"][0]["age"], 30)
+        lane.status = "ready"
+        self.assertLess(eng.state()["lanes"][0]["age"], 3)

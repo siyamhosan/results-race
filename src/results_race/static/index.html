@@ -27,9 +27,10 @@ button:hover,.btn:hover{background:var(--idle)}button:focus-visible,.btn:focus-v
 .badge{padding:2px 9px;border-radius:99px;font-weight:600;font-size:11.5px;background:var(--idle);color:var(--mut)}.badge.retry{background:var(--warnbg);color:var(--warn)}.badge.px{background:var(--brand2);color:var(--brand)}
 input#cap{width:100%;height:64px;font:600 32px/1 inherit;letter-spacing:.32em;text-align:center;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);padding:0 0 0 .32em}
 input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.hint{height:20px;margin-top:8px;font-size:12px;color:var(--mut)}
-.chips{margin-top:auto;width:100%;height:112px;overflow:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;justify-content:center;padding-top:10px;border-top:1px solid var(--line)}
-.chip{height:24px;font-size:11.5px;padding:0 9px;border-radius:99px;background:var(--idle);display:flex;gap:6px;align-items:center;white-space:nowrap}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--mut)}.chip.ready .dot{background:var(--ok)}.chip.busy .dot,.chip.warming .dot{background:#e0a100}.chip.cooldown .dot{background:var(--bad)}
+.chips{margin-top:auto;width:100%;height:150px;overflow:auto;display:flex;flex-direction:column;gap:1px;padding-top:8px;border-top:1px solid var(--line);text-align:left}
+.ln{display:grid;grid-template-columns:8px 1fr auto;gap:0 8px;align-items:center;font-size:11.5px;padding:3px 2px;min-width:0}
+.ln b{font-weight:600;white-space:nowrap}.ln em{font-style:normal;color:var(--mut);white-space:nowrap}.ln small{grid-column:2/4;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:14px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mut)}.ln.ready .dot{background:var(--ok)}.ln.busy .dot,.ln.warming .dot{background:#e0a100}.ln.cooldown .dot{background:var(--bad)}
 .list{height:604px;display:flex;flex-direction:column;padding:12px}
 .listhead{display:flex;gap:8px;align-items:flex-start;height:38px;flex:none}#allBtn{flex:none;height:32px;font-size:13px;padding:0 12px}#allBtn b{background:var(--idle);border-radius:99px;padding:1px 8px;font-size:12px;min-width:22px;text-align:center}#allBtn .sm{display:none}#allBtn[data-busy] span{display:none}#allBtn[data-busy]:before{content:"Rendering…"}.tabs{display:flex;gap:6px;height:38px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{height:32px;font-size:13px;border-radius:99px;font-weight:600}.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .rows{flex:1;overflow-y:auto;margin-top:8px;scrollbar-gutter:stable}
@@ -54,7 +55,7 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 .addbox input:focus,.addbox select:focus{border-color:var(--brand);outline:none}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.err{height:18px;font-size:13px;color:var(--bad)}.row{display:flex;gap:8px;justify-content:flex-end}
 .addbox code{background:var(--idle);padding:1px 5px;border-radius:5px}.mtag{flex:none;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--warnbg);color:var(--warn)}
 .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:99;font-size:14px;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0)}
-@media(max-width:820px){header{height:auto;min-height:52px;align-items:flex-start;padding-bottom:2px}header .actions button{height:34px;padding:0 10px;font-size:12.5px}.wrap{padding:12px}.grid{grid-template-columns:minmax(0,1fr)}.card{min-width:0}.s{grid-template-columns:minmax(0,1fr) 96px}.s .time{display:none}.s .r em{min-width:7ch}.entry{position:static;height:auto}.chips{margin-top:12px;height:76px}.list{height:480px}.stats{grid-template-columns:repeat(2,1fr)}
+@media(max-width:820px){header{height:auto;min-height:52px;align-items:flex-start;padding-bottom:2px}header .actions button{height:34px;padding:0 10px;font-size:12.5px}.wrap{padding:12px}.grid{grid-template-columns:minmax(0,1fr)}.card{min-width:0}.s{grid-template-columns:minmax(0,1fr) 96px}.s .time{display:none}.s .r em{min-width:7ch}.entry{position:static;height:auto}.chips{margin-top:12px;height:150px}.list{height:480px}.stats{grid-template-columns:repeat(2,1fr)}
 .brand h1,.brand small{display:none}#allBtn .lg{display:none}#allBtn:not([data-busy]) .sm{display:inline}button,.btn{padding:0 11px;font-size:13px}.stat b{font-size:22px}
 #modal{padding:0;align-items:stretch}.dialog{width:100%;height:100dvh;border-radius:0;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
 .preview{padding:8px}.side{border-left:0;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:8px;overflow:visible}
@@ -103,6 +104,7 @@ __CREDIT__</div>
 <script>
 const $=id=>document.getElementById(id),sec=ms=>ms?(ms/1000).toFixed(ms<10000?2:1)+'s':'–',host=u=>(u||'').replace(/^https?:\/\//,'');
 let cur=null,sent=new Set(),filter='all',data=null,openRoll=null,tt;
+const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),ms)}
 function toggleTheme(){const t=document.documentElement.dataset.theme=='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.theme=t}
 function fit(){const p=$('paper'),k=Math.min(1,(p.clientWidth-36)/794,(p.clientHeight-36)/1123);
@@ -154,7 +156,7 @@ function render(){const st=data,S=st.students;$('addBtn').style.display=st.can_a
   $('sAvg').textContent=ds.length?sec(ds.reduce((a,b)=>a+b)/ds.length):'–';$('sFast').textContent=ds.length?sec(Math.min(...ds)):'–';
   const rd=st.lanes.filter(l=>l.status=='ready').length,px=st.lanes.filter(l=>l.proxy).length;
   $('sLanes').textContent=`${rd}/${st.lanes.length}`;$('cfg').textContent=`${new Set(st.lanes.map(l=>l.site)).size} sites · ${st.lanes.length-px} direct${px?` + ${px} proxied`:''} lanes`;
-  $('chips').innerHTML=st.lanes.map(l=>`<span class="chip ${l.status}" title="${l.msg||l.site}${l.proxy?' via '+l.proxy:''}"><i class=dot></i>${l.id} ${l.ms}ms</span>`).join('')}
+  $('chips').innerHTML=st.lanes.map(l=>`<div class="ln ${l.status}"><i class=dot></i><b title="${l.site}${l.proxy?' via '+l.proxy:''}">${l.id}</b><em>${l.status}${l.status=='ready'?` · ${l.ms}ms`:` · ${l.age}s`}</em>${l.msg?`<small title="${esc(l.msg)}">${esc(l.msg)}</small>`:''}</div>`).join('')}
 async function poll(){
   try{data=await (await fetch('/state')).json()}catch(e){return}
   render();const o=data.offer,S=data.students;
