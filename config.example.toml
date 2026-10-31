@@ -90,12 +90,16 @@ logos = true
 assets_dir = ""
 # line above the board name
 header_line = "Government of the People's Republic of Bangladesh"
+# large title on the sheet
+board_title = "Board of Intermediate and Secondary Education"
 # title of the sheet
 sheet_title = "RESULT SHEET"
 # footer text
 footer_note = "Unofficial copy of the result published by the board's public service. Verify at the source before use."
 # append how long the lookup took to the footer
 show_fetch_time = true
+# small line at the very bottom of the sheet and PNG; empty = none
+credit = "BazarLab by Siyam"
 # PNG pixel density 1-4 (3 = 2382x3369)
 png_scale = 3
 # source for `fetch-assets`

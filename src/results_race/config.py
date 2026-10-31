@@ -91,9 +91,11 @@ class Card:
     logos: bool = True  # draw the seal / board logo if they are in assets_dir (see `results-race fetch-assets`)
     assets_dir: str = ""  # empty = ~/.local/share/results-race/assets
     header_line: str = "Government of the People's Republic of Bangladesh"
+    board_title: str = "Board of Intermediate and Secondary Education"  # large title; the board's own name comes from the result
     sheet_title: str = "RESULT SHEET"
     footer_note: str = FOOTER_NOTE
     show_fetch_time: bool = True
+    credit: str = "BazarLab by Siyam"  # small line at the very bottom of the sheet and PNG; empty = none
     png_scale: int = 3  # 3 = 2382x3369 px
     seal_url: str = SEAL_URL  # where `fetch-assets` downloads from
     board_logo_url: str = BOARD_LOGO_URL
@@ -206,8 +208,8 @@ def validate(cfg):
 
 def parser():
     p = argparse.ArgumentParser(prog="results-race", description="Race several result sites at once; you type the captchas.")
-    p.add_argument("command", nargs="?", default="run", choices=["run", "fetch-assets", "print-config", "init-config"],
-                   help="run (default) | fetch-assets (download the logos) | print-config | init-config")
+    p.add_argument("command", nargs="?", default="run", choices=["run", "demo", "fetch-assets", "print-config", "init-config"],
+                   help="run (default) | demo (try it on fake sites and made-up students) | fetch-assets (download the logos) | print-config | init-config")
     p.add_argument("--config", help="TOML file (default: $RESULTS_RACE_CONFIG, ./results-race.toml, ~/.config/results-race/config.toml)")
     p.add_argument("--students", help="[students] file")
     p.add_argument("--proxies", help="[proxies] file")

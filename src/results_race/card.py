@@ -1,6 +1,7 @@
 """Render a saved result as one A4 page (794x1123 CSS px = 210x297 mm at 96 dpi).
 Fonts and logos are embedded in the page, so it renders the same offline. Logos are optional (see CardStyle)."""
 import base64
+import re
 from dataclasses import dataclass
 from html import escape as e
 from pathlib import Path
@@ -21,6 +22,7 @@ class CardStyle:
     sheet_title: str = "RESULT SHEET"
     footer_note: str = FOOTER_NOTE
     show_fetch_time: bool = True
+    credit: str = ""  # a small line at the very bottom; empty = none
 
 
 def _data_uri(path):
@@ -81,8 +83,9 @@ td.code{color:#53636f;width:62px}td.gr{font-weight:600;width:84px}td.pt{width:11
 .dense td{padding:3px 10px;font-size:12.5px}.dense .kv>div{padding:4px 0 5px}
 .sub td{background:#e6f0eb!important;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#0b3d2e;padding:4px 10px}
 .scale{font-size:10px;color:#53636f;display:flex;justify-content:space-between}
-.foot{margin:auto 46px 0;padding:11px 0 18px;border-top:2px solid #006a4e;display:flex;justify-content:space-between;gap:24px;font-size:10.5px;color:#53636f;position:relative}
-.foot b{color:#1d2a33;font-weight:600}"""
+.foot{margin:auto 46px 0;padding:11px 0 28px;border-top:2px solid #006a4e;display:flex;justify-content:space-between;gap:24px;font-size:10.5px;color:#53636f;position:relative}
+.foot b{color:#1d2a33;font-weight:600}
+.credit{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.12em;color:#53636f}"""
 
 
 def gpa_letter(g):
@@ -113,7 +116,7 @@ def render(rec, exam, year, style=None):
     failed = g <= 0
     ca = rows(r.get("display_details_ca"))
     took = f' · fetched in {rec["ms"] / 1000:.1f}s' if rec.get("ms") and style.show_fetch_time else ""  # shown beside the site
-    host = rec.get("site", "").replace("https://", "")
+    host = re.sub(r"^https?://", "", rec.get("site", ""))
     ref = f'{r.get("board_name", "")[:3]}-{exam}{str(year)[-2:]}-{r.get("roll_no", "")}'.upper()
     fields = [("Father", "fname"), ("Mother", "mname"), ("Roll No", "roll_no"), ("Registration", "regno"), ("Session", "session"),
               ("Group", "stud_group"), ("Student type", "stud_type"), ("Date of birth", "dob")]
@@ -141,4 +144,5 @@ def render(rec, exam, year, style=None):
 <div class=scale><span>A+ 5.00</span><span>A 4.00</span><span>A- 3.50</span><span>B 3.00</span><span>C 2.00</span><span>D 1.00</span><span>F 0.00</span></div>
 </div>
 <div class=foot><span>{e(style.footer_note)}</span>
-<span style="text-align:right;white-space:nowrap">{e(host)}{e(took)}<br>Ref. {e(ref)}</span></div></div>"""
+<span style="text-align:right;white-space:nowrap">{e(host)}{e(took)}<br>Ref. {e(ref)}</span></div>
+{f'<div class=credit>{e(style.credit)}</div>' if style.credit else ''}</div>"""

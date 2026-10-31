@@ -40,6 +40,20 @@ class CardTest(unittest.TestCase):
         self.assertIn("1.2s", render(REC, "ssc", 2024))
         self.assertNotIn("1.2s", render(REC, "ssc", 2024, CardStyle(show_fetch_time=False)))
 
+    def test_the_site_is_shown_without_its_scheme_whatever_it_is(self):
+        for site in ("https://mirror.example", "http://mirror.localhost:8081"):
+            h = render({**REC, "site": site}, "ssc", 2024)
+            self.assertIn(site.split("//")[1], h)
+            self.assertNotIn(site.split("//")[0] + "//", h)
+
+    def test_the_credit_line_is_shown_when_set_and_absent_otherwise(self):
+        self.assertNotIn("class=credit", render(REC, "ssc", 2024))  # the library default draws none
+        h = render(REC, "ssc", 2024, CardStyle(credit="BazarLab by Siyam"))
+        self.assertIn('<div class=credit>BazarLab by Siyam</div>', h)
+
+    def test_the_credit_is_escaped(self):
+        self.assertIn("&lt;b&gt;x&lt;/b&gt;", render(REC, "ssc", 2024, CardStyle(credit="<b>x</b>")))
+
     def test_text_is_escaped(self):
         rec = {**REC, "result": {**REC["result"], "res": {**REC["result"]["res"], "name": "<script>x</script>"}}}
         self.assertNotIn("<script>x", render(rec, "ssc", 2024))

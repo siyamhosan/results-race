@@ -47,7 +47,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual((c.run.board, c.run.exam, c.run.year), ("rajshahi", "hsc", "2026"))
         self.assertEqual(len(c.sites.urls), 3)
         self.assertEqual((c.server.host, c.server.auth, c.students.file, c.proxies.file), ("127.0.0.1", "", "", ""))
-        self.assertEqual(c.ui.credit, "BazarLab by Siyam")
+        self.assertEqual((c.ui.credit, c.card.credit), ("BazarLab by Siyam", "BazarLab by Siyam"))
 
     def test_file_overrides_default(self):
         c = cfg_for(toml='[run]\nexam = "ssc"\nyear = 2024\n[hedge]\nseconds = 0\n')
