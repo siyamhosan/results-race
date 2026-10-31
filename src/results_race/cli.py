@@ -48,7 +48,8 @@ def build_engine(cfg, browser, students, proxies, style=None):
         browser, students, {"board": cfg.run.board, "exam": cfg.run.exam, "year": cfg.run.year, "result_type": cfg.run.result_type},
         cfg.output.dir, cfg.sites.lanes_per_site, proxies, hedge_s=cfg.hedge.seconds, timeout_s=cfg.hedge.timeout_seconds,
         sites=cfg.sites.urls, paths={"home": cfg.sites.home_path, "captcha": cfg.sites.captcha_path, "result": cfg.sites.result_path},
-        warmup_parallel=cfg.sites.warmup_parallel, card_style=style or card_style(cfg), card_enabled=cfg.card.enabled,
+        warmup_parallel=cfg.sites.warmup_parallel, load_s=cfg.sites.load_timeout_seconds,
+        warmup_wait_s=max(30.0, cfg.sites.load_timeout_seconds * 1.5), card_style=style or card_style(cfg), card_enabled=cfg.card.enabled,
         png_scale=cfg.card.png_scale, allow_manual=cfg.students.allow_manual_add)
 
 

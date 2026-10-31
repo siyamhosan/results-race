@@ -60,6 +60,11 @@ class LaneConfigTest(unittest.TestCase):
         self.assertIn("'/x/res'", lanes[0].submit_js(1000, {"a": "b"}))
         self.assertEqual(lanes[0].home_url, "https://one.test/x/home")
 
+    def test_load_timeout_reaches_every_lane_including_proxied_twins(self):
+        lanes = build_lanes(None, ["https://one.test"], 1, ["h:1"], load_s=75)
+        self.assertEqual([l.load_s for l in lanes], [75, 75])
+        self.assertEqual(Lane(None, "https://one.test", 0).load_s, 20)
+
     def test_default_paths_match_the_known_result_app(self):
         lane = Lane(None, "https://one.test", 0)
         self.assertEqual(lane.home_url, "https://one.test/v2/home")

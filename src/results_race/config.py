@@ -36,6 +36,7 @@ class Sites:
     urls: list = field(default_factory=lambda: list(DEFAULT_SITES))  # mirrors running the same result app
     lanes_per_site: int = 2  # parallel browser sessions per site
     warmup_parallel: int = 0  # start this many sessions at a time (0 = all at once); lower it on a small server
+    load_timeout_seconds: float = 20.0  # how long a page or captcha may take to load before the lane backs off and retries
     home_path: str = "/v2/home"
     captcha_path: str = "/v2/captcha"
     result_path: str = "/v2/getres"
@@ -197,6 +198,8 @@ def validate(cfg):
         raise ConfigError("[hedge] seconds must be >= 0 and timeout_seconds > 0")
     if not 1 <= cfg.card.png_scale <= 4:
         raise ConfigError("[card] png_scale must be 1-4")
+    if cfg.sites.load_timeout_seconds <= 0:
+        raise ConfigError("[sites] load_timeout_seconds must be > 0")
     if cfg.sites.warmup_parallel < 0:
         raise ConfigError("[sites] warmup_parallel must be >= 0")
     if cfg.ui.captcha_min_length < 1:

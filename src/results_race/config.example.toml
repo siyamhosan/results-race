@@ -20,6 +20,8 @@ urls = ["https://result.rajshahiboard.gov.bd", "https://eboardresults.com", "htt
 lanes_per_site = 2
 # start this many sessions at a time (0 = all at once); lower it on a small server, each session costs memory
 warmup_parallel = 0
+# how long a page or captcha may take to load before the lane backs off and retries (raise it when the sites crawl)
+load_timeout_seconds = 20.0
 # page that sets up the session
 home_path = "/v2/home"
 # captcha image

@@ -72,10 +72,11 @@ class Student:
 class Lane:
     """One isolated browser session on one site, optionally behind a proxy."""
 
-    def __init__(self, browser, site, k, proxy=None, n=0, paths=None):
+    def __init__(self, browser, site, k, proxy=None, n=0, paths=None, load_s=20):
         host = site.split("//")[1].replace("www.", "").split(".")[0]
         self.b, self.site, self.proxy = browser, site, proxy
         self.paths = {**DEFAULT_PATHS, **(paths or {})}
+        self.load_s = load_s  # how long a page or captcha may take to load
         self.home_url = site + self.paths["home"]
         self.captcha_js = FETCH_CAPTCHA.replace("__CAPTCHA__", self.paths["captcha"])
         self.id = f"{host}-{k}" + (f"-p{n}" if proxy else "")  # n: which proxy, since several can share one gateway
@@ -114,7 +115,7 @@ class Lane:
         try:
             self.status = "warming"
             self.tab = self.tab or await self.b.new_tab(self.home_url, self.proxy)
-            for _ in range(80):  # the site's own bot check redirects to /v2/home once it passes
+            for _ in range(int(self.load_s * 4)):  # the site's own bot check redirects to /v2/home once it passes
                 await asyncio.sleep(0.4)
                 if await self.tab.eval(f"location.pathname=={json.dumps(self.paths['home'])}&&!!document.getElementById('form')"):
                     return await self.refresh()
@@ -125,7 +126,7 @@ class Lane:
     async def refresh(self):
         t = time.time()
         try:
-            self.img = await asyncio.wait_for(self.tab.eval(self.captcha_js), 20)
+            self.img = await asyncio.wait_for(self.tab.eval(self.captcha_js), self.load_s)
             self.latency, self.fetched, self.fails = time.time() - t, time.time(), 0
             self.ver += 1
             self.status, self.msg = "ready", ""
@@ -145,7 +146,7 @@ class Lane:
                     self.status = "warming"
                     self.tab = await self.b.new_tab(self.home_url, self.proxy)
                     await asyncio.sleep(2)
-                self.img = await asyncio.wait_for(self.tab.eval(self.captcha_js), 20)
+                self.img = await asyncio.wait_for(self.tab.eval(self.captcha_js), self.load_s)
                 self.fetched, self.fails, self.ver, self.status, self.msg = time.time(), 0, self.ver + 1, "ready", ""
                 return
             except Exception as e:
@@ -162,17 +163,17 @@ class Lane:
             return "site_error", str(e)[:80]
 
 
-def build_lanes(browser, sites, per_site, proxies, paths=None):
+def build_lanes(browser, sites, per_site, proxies, paths=None, load_s=20):
     """Direct lanes first; then every lane gets one extra twin per proxy."""
     base = [(s, k) for s in sites for k in range(per_site)]
-    return [Lane(browser, s, k, paths=paths) for s, k in base] + \
-           [Lane(browser, s, k, p, n, paths) for n, p in enumerate(proxies, 1) for s, k in base]
+    return [Lane(browser, s, k, paths=paths, load_s=load_s) for s, k in base] + \
+           [Lane(browser, s, k, p, n, paths, load_s) for n, p in enumerate(proxies, 1) for s, k in base]
 
 
 class Engine:
     def __init__(self, browser, students, cfg, out_dir, lanes_per_site=2, proxies=(), lanes=None,
                  hedge_s=1.0, timeout_s=15, *, sites=None, paths=None, card_style=None, card_enabled=True,
-                 png_scale=3, allow_manual=True, warmup_parallel=0, warmup_wait_s=30.0):
+                 png_scale=3, allow_manual=True, warmup_parallel=0, warmup_wait_s=30.0, load_s=20):
         """cfg: {"board", "exam", "year", optional "result_type"}. hedge_s=0 turns switching off."""
         self.browser, self.cfg, self.out = browser, cfg, Path(out_dir)
         self.hedge_s, self.timeout_s = hedge_s, timeout_s
@@ -180,7 +181,7 @@ class Engine:
         self._png_cache = {}  # student id -> ((mtime, size, scale), png): rendering costs about a second
         self.card_style, self.card_enabled, self.png_scale, self.allow_manual = card_style, card_enabled, png_scale, allow_manual
         self.students = [Student(*s) for s in students]
-        self.lanes = lanes if lanes is not None else build_lanes(browser, sites or SITES, lanes_per_site, list(proxies), paths)
+        self.lanes = lanes if lanes is not None else build_lanes(browser, sites or SITES, lanes_per_site, list(proxies), paths, load_s)
         self.out.mkdir(parents=True, exist_ok=True)
         self.manual_file = self.out / "manual.json"
         if self.manual_file.exists():  # manually added students come first, newest first, as saved

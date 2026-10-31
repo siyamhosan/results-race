@@ -42,6 +42,11 @@ def cfg_for(argv=(), env=None, toml=None):
 
 
 class ConfigTest(unittest.TestCase):
+    def test_load_timeout_is_configurable_and_must_be_positive(self):
+        self.assertEqual(cfg_for(["--set", "sites.load_timeout_seconds=75"]).sites.load_timeout_seconds, 75.0)
+        with self.assertRaises(ConfigError):
+            cfg_for(["--set", "sites.load_timeout_seconds=0"])
+
     def test_everything_has_a_default_so_zero_config_works(self):
         c = cfg_for()
         self.assertEqual((c.run.board, c.run.exam, c.run.year), ("rajshahi", "hsc", "2026"))
