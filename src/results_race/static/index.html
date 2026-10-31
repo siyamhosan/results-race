@@ -31,11 +31,11 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 .chip{height:24px;font-size:11.5px;padding:0 9px;border-radius:99px;background:var(--idle);display:flex;gap:6px;align-items:center;white-space:nowrap}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--mut)}.chip.ready .dot{background:var(--ok)}.chip.busy .dot,.chip.warming .dot{background:#e0a100}.chip.cooldown .dot{background:var(--bad)}
 .list{height:604px;display:flex;flex-direction:column;padding:12px}
-.listhead{display:flex;gap:8px;align-items:flex-start;height:38px;flex:none}#allBtn{flex:none;height:32px;font-size:13px;padding:0 12px}#allBtn b{background:var(--idle);border-radius:99px;padding:1px 8px;font-size:12px;min-width:22px;text-align:center}#allBtn .sm{display:none}#allBtn[data-busy] span{display:none}#allBtn[data-busy]:before{content:"Rendering…"}.tabs{display:flex;gap:6px;height:38px;flex:1;min-width:0;overflow-x:auto}.tab{height:32px;font-size:13px;border-radius:99px;font-weight:600}.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.listhead{display:flex;gap:8px;align-items:flex-start;height:38px;flex:none}#allBtn{flex:none;height:32px;font-size:13px;padding:0 12px}#allBtn b{background:var(--idle);border-radius:99px;padding:1px 8px;font-size:12px;min-width:22px;text-align:center}#allBtn .sm{display:none}#allBtn[data-busy] span{display:none}#allBtn[data-busy]:before{content:"Rendering…"}.tabs{display:flex;gap:6px;height:38px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{height:32px;font-size:13px;border-radius:99px;font-weight:600}.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .rows{flex:1;overflow-y:auto;margin-top:8px;scrollbar-gutter:stable}
 .s{display:grid;grid-template-columns:minmax(0,1fr) 112px 56px;grid-template-rows:24px 20px;gap:0 10px;align-items:center;height:58px;padding:7px 10px;border-radius:12px}
 .s.done{cursor:pointer}.s.done:hover,.s.done:focus-visible{background:var(--idle);outline:none}
-.s .r{display:flex;align-items:center;gap:8px;min-width:0;font-weight:700}.s .r em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.s .r .gpa{flex:none;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--brand2);color:var(--brand)}.s .sub{grid-column:1/-1;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s .r{display:flex;align-items:center;gap:8px;min-width:0;font-weight:700}.s .r em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.s .r .gpa{flex:none;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--brand2);color:var(--brand)}.s .r .gpa.fail{background:var(--badbg);color:var(--bad)}.s .sub{grid-column:1/-1;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill{height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border-radius:99px}.p-done{background:var(--okbg);color:var(--ok)}.p-pending{background:var(--idle);color:var(--mut)}.p-inflight{background:var(--warnbg);color:var(--warn)}.p-failed{background:var(--badbg);color:var(--bad)}
 .credit{text-align:center;color:var(--mut);font-size:12px;padding:16px 0 4px;letter-spacing:.02em}.time{font-size:12.5px;color:var(--mut);text-align:right}.empty{padding:30px;text-align:center;color:var(--mut)}
 #modal{position:fixed;inset:0;z-index:50;display:none;background:#0a1118b3;backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}#modal.on{display:flex;animation:fi .15s}
@@ -101,7 +101,7 @@ __CREDIT__</div>
 <div class=row><button type=button onclick="closeAdd()">Cancel</button><button class=primary type=submit>Add and queue</button></div></form></div>
 <div class=toast id=toast role=status></div>
 <script>
-const $=id=>document.getElementById(id),sec=ms=>ms?(ms/1000).toFixed(ms<10000?2:1)+'s':'–',host=u=>(u||'').replace('https://','');
+const $=id=>document.getElementById(id),sec=ms=>ms?(ms/1000).toFixed(ms<10000?2:1)+'s':'–',host=u=>(u||'').replace(/^https?:\/\//,'');
 let cur=null,sent=new Set(),filter='all',data=null,openRoll=null,tt;
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),ms)}
 function toggleTheme(){const t=document.documentElement.dataset.theme=='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.theme=t}
@@ -147,7 +147,7 @@ function render(){const st=data,S=st.students;$('addBtn').style.display=st.can_a
     const label=s.status=='done'?(data.card?'View result':'Done'):s.status=='inflight'?'Fetching…':s.status=='pending'&&s.msg?'Switch lane':s.status[0].toUpperCase()+s.status.slice(1);
     const cls=s.status=='pending'&&s.msg?'inflight':s.status;
     return `<div class="s ${s.status}" ${s.status=='done'&&data.card?`tabindex=0 role=button onclick="openResult('${s.id}')" onkeydown="if(event.key=='Enter')openResult('${s.id}')"`:''}>
-    <span class=r><em>${s.roll}${s.name?' · '+s.name:''}</em>${s.manual?`<b class=mtag>${s.exam.toUpperCase()} ${s.year}</b>`:''}${s.status=='done'&&s.gpa?`<b class=gpa>GPA ${s.gpa}</b>`:''}</span><span class="pill p-${cls}">${label}</span><span class=time>${s.status=='done'?sec(s.ms):''}</span>
+    <span class=r><em>${s.roll}${s.name?' · '+s.name:''}</em>${s.manual?`<b class=mtag>${s.exam.toUpperCase()} ${s.year}</b>`:''}${s.status=='done'&&s.gpa?(parseFloat(s.gpa)>0?`<b class=gpa>GPA ${s.gpa}</b>`:'<b class="gpa fail">Not passed</b>'):''}</span><span class="pill p-${cls}">${label}</span><span class=time>${s.status=='done'?sec(s.ms):''}</span>
     <span class=sub>${s.status=='done'?host(s.site):(s.msg||'')}</span></div>`}).join('')||'<div class=empty>Nothing here.</div>';
   const ds=S.filter(s=>s.status=='done'&&s.ms).map(s=>s.ms),d=S.filter(s=>s.status=='done').length;
   $('sDone').textContent=`${d}/${S.length}`;$('fill').style.width=S.length?100*d/S.length+'%':0;
