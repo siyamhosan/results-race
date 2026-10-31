@@ -1,0 +1,107 @@
+# results-race configuration. Every option is optional; this file lists them all at their defaults.
+# Copy to ./results-race.toml (or pass --config). Command-line flags and RESULTS_RACE_<SECTION>_<KEY> env vars override it.
+
+# What to look up. Per-student exam/year can also be set when adding a student in the page.
+[run]
+# the board's name exactly as the result form's dropdown spells it
+board = "rajshahi"
+# ssc, hsc, jsc ...
+exam = "hsc"
+# examination year
+year = "2026"
+# 1 = individual result
+result_type = "1"
+
+# Mirror sites that run the same result web app. The lookups race across all of them.
+[sites]
+# base URLs; add or remove mirrors freely
+urls = ["https://result.rajshahiboard.gov.bd", "https://eboardresults.com", "https://www.educationboardresults.gov.bd"]
+# parallel browser sessions per site (more = more captchas ready)
+lanes_per_site = 2
+# start this many sessions at a time (0 = all at once); lower it on a small server, each session costs memory
+warmup_parallel = 0
+# page that sets up the session
+home_path = "/v2/home"
+# captcha image
+captcha_path = "/v2/captcha"
+# result lookup (POST)
+result_path = "/v2/getres"
+
+# Who to look up.
+[students]
+# .json ([{"roll":..,"reg":..}]), .csv or .txt (roll,reg per line). Empty = start empty, add students in the page
+file = ""
+# show the Add student button
+allow_manual_add = true
+
+# Optional. Every lane also gets one twin per proxy.
+[proxies]
+# one proxy per line: host:port | scheme://host:port | scheme://user:pass@host:port | host:port:user:pass. Empty = none
+file = ""
+
+# When a site is slow, switch the student to another site; a late answer is still used.
+[hedge]
+# silent this long = bypass that lane (0 = never switch)
+seconds = 1.0
+# how long a bypassed lane may still answer
+timeout_seconds = 15.0
+
+# The page you type captchas into.
+[server]
+# 127.0.0.1 = this machine only; 0.0.0.0 = your local network
+host = "127.0.0.1"
+# port
+port = 8000
+# "user:password" for HTTP Basic login; empty = none
+auth = ""
+# allow host != localhost with no login (only on a network you trust)
+allow_open = false
+
+# Where results are saved (one JSON per student; manual ones go in a manual/ subfolder).
+[output]
+# folder
+dir = "out"
+
+# The headless Chromium that talks to the sites.
+[browser]
+# Chromium/Chrome binary; empty = chromium or google-chrome-stable from PATH
+path = ""
+# set true if Chromium aborts with 'No usable sandbox'
+no_sandbox = false
+
+# Look of the page.
+[ui]
+# page title
+title = "Results race"
+# light | dark | auto
+theme = "light"
+# Enter is ignored until this many characters
+captcha_min_length = 3
+
+# The printable A4 result sheet and PNG download.
+[card]
+# turn the sheet / PNG off entirely
+enabled = true
+# draw logos found in assets_dir (run `results-race fetch-assets` to download them)
+logos = true
+# empty = ~/.local/share/results-race/assets
+assets_dir = ""
+# line above the board name
+header_line = "Government of the People's Republic of Bangladesh"
+# title of the sheet
+sheet_title = "RESULT SHEET"
+# footer text
+footer_note = "Unofficial copy of the result published by the board's public service. Verify at the source before use."
+# append how long the lookup took to the footer
+show_fetch_time = true
+# PNG pixel density 1-4 (3 = 2382x3369)
+png_scale = 3
+# source for `fetch-assets`
+seal_url = "https://upload.wikimedia.org/wikipedia/commons/8/84/Government_Seal_of_Bangladesh.svg"
+# source for `fetch-assets`
+board_logo_url = "https://rajshahiboard.gov.bd/wp-content/uploads/2025/08/cropped-rb_logo-192x192.png"
+
+# Optional.
+[notify]
+# run when a lane is first ready; {url} is the page address, e.g. ["notify-send", "Results ready", "{url}"]
+command = []

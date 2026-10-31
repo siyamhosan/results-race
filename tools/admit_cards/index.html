@@ -1,0 +1,41 @@
+<!doctype html><meta charset=utf-8><title>Admit cards</title>
+<style>
+body{font:16px system-ui;max-width:640px;margin:2em auto;padding:0 1em}
+#bar{height:14px;background:#ddd;border-radius:7px;overflow:hidden}#fill{height:100%;background:#2a7;width:0}
+img{border:1px solid #888;height:80px;image-rendering:auto}input{text-transform:uppercase;font-size:28px;width:9em;padding:.2em}
+li{font-family:monospace}.done{color:#2a7}.failed{color:#c33}.skipped{color:#999}.submitting{color:#c80}
+</style>
+<h2>Admit cards</h2>
+<div id=bar><div id=fill></div></div><p id=count></p>
+<div id=work><p>Reg <b id=reg></b> <span id=err class=failed></span></p>
+<img id=img><button id=new_ type=button>↻ New captcha (Esc)</button><br><br><input id=cap maxlength=5 minlength=5 autofocus autocomplete=off placeholder="type captcha, Enter"></div>
+<ul id=list></ul>
+<script>
+let cur=null,sent=new Set();
+async function poll(){
+  const st=await (await fetch('/state')).json();
+  const done=st.filter(s=>s.status=='done').length,skip=st.filter(s=>s.status=='skipped').length,total=st.length-skip;
+  fill.style.width=100*done/total+'%';count.textContent=`${done}/${total} saved`+(skip?` (${skip} not found, ignored)`:'');
+  list.innerHTML=st.map(s=>`<li class=${s.status}>${s.reg} ${s.status} ${s.msg}</li>`).join('');
+  // next slot needing input; a changed captcha version means the server issued a fresh one
+  const next=st.find(s=>s.status=='ready'&&!sent.has(s.reg+s.v));
+  if(next&&(!cur||cur.reg!=next.reg||cur.v!=next.v)){
+    cur=next;reg.textContent=next.reg;img.src='/captcha/'+next.reg+'?'+next.v;
+    err.textContent=next.msg&&next.msg!='saved'?next.msg:'';cap.value='';cap.focus();
+  }else if(!next&&cur){cur=null;img.removeAttribute('src');reg.textContent=st.every(s=>['done','skipped','failed'].includes(s.status))?'finished':'waiting…'}
+}
+async function reload(){
+  if(!cur)return;const c=cur;sent.add(c.reg+c.v);cur=null;cap.value='';
+  await fetch('/reload',{method:'POST',body:JSON.stringify({reg:c.reg})});poll();
+}
+new_.onclick=reload;
+cap.onkeydown=async e=>{
+  if(e.key=='Escape')return reload();
+  if(e.key!='Enter'||!cur||cap.value.trim().length!=5)return;
+  const c=cur;sent.add(c.reg+c.v);cur=null;
+  const text=cap.value;cap.value='';
+  await fetch('/solve',{method:'POST',body:JSON.stringify({reg:c.reg,captcha:text.toUpperCase()})});
+  poll();
+};
+setInterval(poll,700);poll();
+</script>

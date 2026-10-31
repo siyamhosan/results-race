@@ -1,0 +1,3 @@
+# one student per line: roll, then registration number
+100001 2100000001
+100002 2100000002

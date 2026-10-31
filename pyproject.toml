@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "results-race"
+dynamic = ["version"]
+description = "Race several exam-result sites at once while you type the captchas. Saves each result and renders an A4 sheet."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["websockets>=13"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Environment :: Web Environment",
+  "Intended Audience :: End Users/Desktop",
+]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.45"]  # only to download a Chromium: `playwright install chromium`
+
+[project.scripts]
+results-race = "results_race.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "results_race.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+results_race = ["static/*", "fonts/*", "config.example.toml"]

@@ -1,0 +1,6 @@
+# One proxy per line. Every lane also gets one twin through each proxy listed here.
+# host:port
+# http://host:port
+# socks5://host:port
+# http://user:password@host:port
+# host:port:user:password
