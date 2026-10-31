@@ -44,7 +44,8 @@ class Browser:
             async for raw in self.ws:
                 m = json.loads(raw)
                 if f := self.waiters.pop(m.get("id"), None):
-                    f.set_result(m)
+                    if not f.done():  # the caller may have given up (timeout); a late answer is not an error
+                        f.set_result(m)
                 elif "method" in m:
                     for cb in self.listeners.get((m.get("sessionId"), m["method"]), []):
                         asyncio.create_task(cb(m["params"]))
@@ -67,7 +68,10 @@ class Browser:
         if session:
             msg["sessionId"] = session
         await self.ws.send(json.dumps(msg))
-        m = await fut
+        try:
+            m = await fut
+        finally:
+            self.waiters.pop(msg["id"], None)  # a caller that timed out leaves nothing behind
         if "error" in m:
             raise RuntimeError(m["error"].get("message"))
         return m["result"]
