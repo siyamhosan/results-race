@@ -127,6 +127,24 @@ class ServerTest(unittest.TestCase):
         bad = json.loads(f.call("/add", {"roll": "x", "reg": "1", "exam": "ssc", "year": "2024"})[1])
         self.assertFalse(bad["ok"])
 
+    def test_editing_a_student_through_the_api(self):
+        f = Fixture()
+        self.addCleanup(f.close)
+        sid = json.loads(f.call("/add", {"roll": "100001", "reg": "2100000009", "exam": "ssc", "year": "2024"})[1])["id"]
+        ok = json.loads(f.call("/edit", {"id": sid, "roll": "100001", "reg": "2100000001"})[1])
+        self.assertTrue(ok["ok"])
+        mine = next(s for s in json.loads(f.call("/state")[1])["students"] if s["id"] == sid)
+        self.assertEqual((mine["reg"], mine["status"]), ("2100000001", "pending"))
+        bad = json.loads(f.call("/edit", {"id": sid, "roll": "100001", "reg": "1"})[1])
+        self.assertFalse(bad["ok"])
+
+    def test_the_page_has_an_edit_button_and_form(self):
+        f = Fixture()
+        self.addCleanup(f.close)
+        html = f.call("/")[1].decode()
+        self.assertIn("openEdit(", html)
+        self.assertIn("'/edit'", html)
+
     def test_adding_can_be_disabled(self):
         f = Fixture(allow_manual=False)
         self.addCleanup(f.close)

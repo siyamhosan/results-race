@@ -126,10 +126,12 @@ class App:
                 except ValueError:
                     return self.reply(b'{"error":"bad json"}', code=400)
                 eng, path = app.engine, self.path
-                if not eng or path not in ("/add", "/reload", "/lanes/reload", "/solve", "/reset"):
+                if not eng or path not in ("/add", "/edit", "/reload", "/lanes/reload", "/solve", "/reset"):
                     return self.reply(b"{}", code=404)
-                if path == "/add":
+                if path in ("/add", "/edit"):
                     async def add():
+                        if path == "/edit":
+                            return eng.edit_student(str(b.get("id", "")), b.get("roll", ""), b.get("reg", "")).id
                         return eng.add_student(b.get("roll", ""), b.get("reg", ""), b.get("exam", ""), b.get("year", "")).id
                     try:
                         sid = asyncio.run_coroutine_threadsafe(add(), app.loop).result(5)

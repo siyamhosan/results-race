@@ -53,6 +53,7 @@ class Student:
     def __init__(self, roll, reg, exam=None, year=None, manual=False):
         self.roll, self.reg, self.exam, self.year, self.manual = str(roll), str(reg), exam, year, manual
         self.id = f"{self.roll}-{exam}{year}" if manual else self.roll  # manual entries may reuse a roll from another exam
+        self.orig = self.id  # a listed student keeps its first id, so a saved edit can find it again after a restart
         self.reset()
 
     def reset(self):
@@ -199,6 +200,11 @@ class Engine:
         if self.manual_file.exists():  # manually added students come first, newest first, as saved
             self.students = [Student(m["roll"], m["reg"], m["exam"], m["year"], True)
                              for m in json.loads(self.manual_file.read_text())] + self.students
+        self.edits_file = self.out / "edits.json"  # fixes to listed students (their file is not ours to rewrite)
+        edits = json.loads(self.edits_file.read_text()) if self.edits_file.exists() else {}
+        for s in self.students:
+            if not s.manual and s.orig in edits:
+                s.roll, s.reg, s.id = edits[s.orig]["roll"], edits[s.orig]["reg"], edits[s.orig]["roll"]
         for s in self.students:
             if self.path(s).exists():
                 s.status, s.msg = "done", "already saved"
@@ -211,11 +217,8 @@ class Engine:
     def add_student(self, roll, reg, exam, year):
         if not self.allow_manual:
             raise ValueError("Adding students is turned off")
-        roll, reg, exam, year = str(roll).strip(), str(reg).strip(), str(exam).strip().lower(), str(year).strip()
-        if not re.fullmatch(r"\d{3,12}", roll):
-            raise ValueError("Roll must be 3-12 digits")
-        if not re.fullmatch(r"\d{4,15}", reg):
-            raise ValueError("Registration must be 4-15 digits")
+        roll, reg = self._check_ids(roll, reg)
+        exam, year = str(exam).strip().lower(), str(year).strip()
         if exam not in {"ssc", "hsc", "jsc", self.cfg["exam"]}:
             raise ValueError("Unknown exam")
         if not re.fullmatch(r"(19|20)\d{2}", year):
@@ -224,8 +227,46 @@ class Engine:
         if any(s.id == stu.id for s in self.students):
             raise ValueError("Already in the list")
         self.students.insert(0, stu)
+        self._save_manual()
+        return stu
+
+    @staticmethod
+    def _check_ids(roll, reg):
+        roll, reg = str(roll).strip(), str(reg).strip()
+        if not re.fullmatch(r"\d{3,12}", roll):
+            raise ValueError("Roll must be 3-12 digits")
+        if not re.fullmatch(r"\d{4,15}", reg):
+            raise ValueError("Registration must be 4-15 digits")
+        return roll, reg
+
+    def _save_manual(self):
         self.manual_file.write_text(json.dumps([{"roll": s.roll, "reg": s.reg, "exam": s.exam, "year": s.year}
                                                 for s in self.students if s.manual], indent=1))
+
+    def edit_student(self, sid, roll, reg):
+        """Fix a roll or registration number typed wrong. The student starts over: a result saved under the old
+        numbers is deleted and it goes back in the queue. Survives a restart (manual.json, or edits.json for a listed student)."""
+        if not self.allow_manual:
+            raise ValueError("Editing students is turned off")
+        roll, reg = self._check_ids(roll, reg)
+        stu = next((s for s in self.students if s.id == sid), None)
+        if not stu:
+            raise ValueError("No such student")
+        if stu.status == "inflight":
+            raise ValueError("Being looked up right now: try again in a moment")
+        new_id = f"{roll}-{stu.exam}{stu.year}" if stu.manual else roll
+        if new_id != stu.id and any(s.id == new_id for s in self.students):
+            raise ValueError("Already in the list")
+        self.path(stu).unlink(missing_ok=True)
+        self._png_cache.pop(stu.id, None)
+        stu.roll, stu.reg, stu.id = roll, reg, new_id
+        stu.reset()
+        if stu.manual:
+            self._save_manual()
+        else:
+            edits = json.loads(self.edits_file.read_text()) if self.edits_file.exists() else {}
+            edits[stu.orig] = {"roll": roll, "reg": reg}
+            self.edits_file.write_text(json.dumps(edits, indent=1))
         return stu
 
     @staticmethod
