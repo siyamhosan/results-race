@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from results_race.card import CardStyle, load_logos, render
+from results_race.card import CardStyle, load_logos, parse_entry, render
 
 REC = {"site": "https://mirror.example", "ms": 1234, "result": {"status": 0, "res": {
     "name": "RAHIM UDDIN AHMED", "fname": "KARIM AHMED", "mname": "RAHIMA BEGUM", "roll_no": "100001",
@@ -11,6 +11,13 @@ REC = {"site": "https://mirror.example", "ms": 1234, "result": {"status": 0, "re
     "display_details": "101:A ,107:A+,109:B", "display_details_ca": "147:A+"},
     "sub_details": [{"SUB_CODE": "101", "SUB_NAME": "BANGLA"}, {"SUB_CODE": "107", "SUB_NAME": "ENGLISH"},
                     {"SUB_CODE": "109", "SUB_NAME": "MATHEMATICS"}, {"SUB_CODE": "147", "SUB_NAME": "PHYSICAL EDUCATION"}]}}
+# the shape HSC 2026 answers in: marks before the grade, two papers sharing one code, a 4th subject, converted marks
+HSC = {"site": "https://mirror.example", "ms": 900, "result": {"status": 0, "showmarks": 1, "res": {
+    **REC["result"]["res"], "res_detail": "GPA=4.50", "tot_full": "1220", "conv_1000": "700.50", "sub4th": "125-126",
+    "display_details": "101-102:171=A+,107-108:076=D,275:097=A+,125-126:060+40+80=180=A+", "display_details_ca": ""},
+    "sub_details": [{"SUB_CODE": c, "SUB_NAME": n} for c, n in [
+        ("101", "BANGLA"), ("102", "BANGLA"), ("107", "ENGLISH"), ("108", "ENGLISH"), ("275", "ICT"), ("125", "GEOGRAPHY"),
+        ("126", "GEOGRAPHY")]]}}
 LOGO = "data:image/png;base64,AAAA"
 
 
@@ -20,6 +27,27 @@ class CardTest(unittest.TestCase):
         for text in ["RAHIM UDDIN AHMED", "100001", "4.22", "PASSED", "BANGLA", "MATHEMATICS", "PHYSICAL EDUCATION",
                      "SAMPLE HIGH SCHOOL", "SSC", "2024", "Unofficial"]:
             self.assertIn(text, h)
+
+    def test_parse_entry_reads_every_shape_the_site_uses(self):
+        self.assertEqual(parse_entry("101:A+"), ("101", "", "A+"))
+        self.assertEqual(parse_entry("101-102:171=A+"), ("101-102", "171", "A+"))
+        self.assertEqual(parse_entry("275:097=A+"), ("275", "97", "A+"))
+        self.assertEqual(parse_entry("125-126:060+40+80=180=A"), ("125-126", "180", "A"))
+
+    def test_marks_sheet_shows_marks_names_points_and_the_fourth_subject(self):
+        h = render(HSC, "hsc", 2026)
+        self.assertIn("<th class=c>Marks</th>", h)
+        self.assertEqual(h.count("BANGLA"), 1)  # two papers, one row
+        for text in ["101-102", ">171<", ">97<", ">180<", "4th subject", "Converted marks (out of 1000): <b>700.50</b>"]:
+            self.assertIn(text, h)
+        self.assertNotIn("=A+", h)  # the grade column holds the grade only
+        self.assertEqual(h.count('class="c pt">5.00'), 3)
+        self.assertEqual(h.count('class="c pt">1.00'), 1)
+
+    def test_grade_only_results_have_no_marks_column(self):
+        h = render(REC, "ssc", 2024)
+        self.assertNotIn("Marks", h)
+        self.assertNotIn("Converted", h)
 
     def test_logos_are_optional(self):
         self.assertNotIn("<img", render(REC, "ssc", 2024))  # nothing bundled, nothing drawn

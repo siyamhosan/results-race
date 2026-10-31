@@ -79,7 +79,8 @@ body{background:#fff;font:13.5px/1.45 'Plex Sans',system-ui,sans-serif;color:#1d
 .kv .w{grid-column:span 3}
 table{width:100%;border-collapse:collapse}th{background:#0b3d2e;color:#fff;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;text-align:left;padding:7px 10px}
 td{padding:4.6px 10px;border-bottom:1px solid #e1e8e5}tr:nth-child(even) td{background:#f5f9f7}td.c,th.c{text-align:center}
-td.code{color:#53636f;width:62px}td.gr{font-weight:600;width:84px}td.pt{width:110px}
+td.code{color:#53636f;width:62px;white-space:nowrap}.conv{font-size:11px;color:#53636f;text-align:right;margin-top:6px}.conv b{color:#1d2a33}
+.f4{font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#006a4e;border:1px solid #006a4e;border-radius:3px;padding:0 4px;margin-left:6px}td.gr{font-weight:600;width:84px}td.pt{width:110px}
 .dense td{padding:3px 10px;font-size:12.5px}.dense .kv>div{padding:4px 0 5px}
 .sub td{background:#e6f0eb!important;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#0b3d2e;padding:4px 10px}
 .scale{font-size:10px;color:#53636f;display:flex;justify-content:space-between}
@@ -92,19 +93,37 @@ def gpa_letter(g):
     return next((l for lo, l in GRADE_OF_GPA if g >= lo), "F")
 
 
+def parse_entry(part):
+    """One `display_details` entry -> (code, marks, grade). The site writes `101:A+`, or with marks `101:171=A+`
+    (two papers of a subject share a code like `101-102`), or `101:60+40+30=130=A+` (parts, then the total)."""
+    code, _, rest = part.partition(":")
+    *marks, grade = (x.strip() for x in rest.split("="))
+    total = marks[-1] if marks else ""
+    return code.strip(), (total.lstrip("0") or "0") if total.isdigit() else total, grade
+
+
 def render(rec, exam, year, style=None):
     style = style or CardStyle()
     r, d = rec["result"]["res"], rec["result"]
     names = {s["SUB_CODE"]: s["SUB_NAME"] for s in d.get("sub_details", [])}
 
+    has_marks = any("=" in p for p in (r.get("display_details") or "").split(","))
+
+    def subject(code):  # `101-102` is two papers of one subject: show its name once
+        seen = []
+        for c in code.split("-"):
+            if names.get(c) and names[c] not in seen:
+                seen.append(names[c])
+        return e(" / ".join(seen)) + (" <span class=f4>4th subject</span>" if code == r.get("sub4th") else "")
+
     def rows(text):
         out = []
         for part in (text or "").split(","):
             if ":" in part:
-                code, grade = (x.strip() for x in part.split(":", 1))
-                pt = POINTS.get(grade.upper(), 0)
-                out.append(f'<tr><td class=code>{e(code)}</td><td>{e(names.get(code, ""))}</td><td class="c gr">{e(grade)}</td>'
-                           f'<td class="c pt">{pt:.2f}</td></tr>')
+                code, marks, grade = parse_entry(part)
+                out.append(f'<tr><td class=code>{e(code)}</td><td>{subject(code)}</td>'
+                           f'{f"<td class=c>{e(marks)}</td>" if has_marks else ""}'
+                           f'<td class="c gr">{e(grade)}</td><td class="c pt">{POINTS.get(grade.upper(), 0):.2f}</td></tr>')
         return "".join(out)
 
     n_rows = (r.get("display_details") or "").count(":") + (r.get("display_details_ca") or "").count(":")
@@ -123,6 +142,7 @@ def render(rec, exam, year, style=None):
     kv = "".join(f'<div><small>{k}</small><b>{e(str(r.get(key) or "-"))}</b></div>' for k, key in fields)
     kv += f'<div><small>Thana / District</small><b>{e(r.get("t_name") or "-")} / {e(r.get("z_name") or "-")}</b></div>'
     kv += f'<div class=w><small>Institution</small><b>{e(r.get("inst_name") or "-")}</b></div>'
+    conv_note = f"<div class=conv>Converted marks (out of 1000): <b>{e(str(r['conv_1000']))}</b></div>" if r.get("conv_1000") else ""
     tick = '<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=3 stroke-linecap=round stroke-linejoin=round><circle cx=12 cy=12 r=10.5 stroke-width=2 /><path d="M7 12.5l3.2 3.2L17 8.8"/></svg>'
     cross = '<svg viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=3 stroke-linecap=round><circle cx=12 cy=12 r=10.5 stroke-width=2 /><path d="M8 8l8 8M16 8l-8 8"/></svg>'
     return f"""<!doctype html><meta charset=utf-8><meta name=viewport content="width=794"><style>{CSS}</style>
@@ -139,9 +159,9 @@ def render(rec, exam, year, style=None):
 <div><small>Result</small><div class="res serif {'no' if failed else 'ok'}">{cross if failed else tick}{'NOT PASSED' if failed else 'PASSED'}</div></div></div>
 <div class=who><small>Name of examinee</small><b class=serif>{e(r.get("name") or "")}</b></div>
 <div class=kv>{kv}</div>
-<table><tr><th>Code</th><th>Subject</th><th class=c>Grade</th><th class=c>Grade point</th></tr>{rows(r.get("display_details"))}
-{f'<tr class=sub><td colspan=4>Additional / co-curricular</td></tr>{ca}' if ca else ''}</table>
-<div class=scale><span>A+ 5.00</span><span>A 4.00</span><span>A- 3.50</span><span>B 3.00</span><span>C 2.00</span><span>D 1.00</span><span>F 0.00</span></div>
+<table><tr><th>Code</th><th>Subject</th>{"<th class=c>Marks</th>" if has_marks else ""}<th class=c>Grade</th><th class=c>Grade point</th></tr>{rows(r.get("display_details"))}
+{f'<tr class=sub><td colspan={4 + has_marks}>Additional / co-curricular</td></tr>{ca}' if ca else ''}</table>
+{conv_note}<div class=scale><span>A+ 5.00</span><span>A 4.00</span><span>A- 3.50</span><span>B 3.00</span><span>C 2.00</span><span>D 1.00</span><span>F 0.00</span></div>
 </div>
 <div class=foot><span>{e(style.footer_note)}</span>
 <span style="text-align:right;white-space:nowrap">{e(host)}{e(took)}<br>Ref. {e(ref)}</span></div>
