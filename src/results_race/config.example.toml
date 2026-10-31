@@ -77,6 +77,8 @@ title = "Results race"
 theme = "light"
 # Enter is ignored until this many characters
 captcha_min_length = 3
+# small line at the bottom of the page; empty = none
+credit = "BazarLab by Siyam"
 
 # The printable A4 result sheet and PNG download.
 [card]

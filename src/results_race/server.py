@@ -21,7 +21,9 @@ FAILED = object()  # a render that failed (the client was already sent a 500)
 def render_page(cfg):
     """The one HTML file, with the user's title / theme / captcha length filled in."""
     html = (STATIC / "index.html").read_text(encoding="utf-8")
-    values = {"__TITLE__": htmllib.escape(cfg.ui.title), "__THEME__": cfg.ui.theme, "__MINLEN__": str(int(cfg.ui.captcha_min_length))}
+    credit = f"<footer class=credit>{htmllib.escape(cfg.ui.credit)}</footer>" if cfg.ui.credit else ""
+    values = {"__TITLE__": htmllib.escape(cfg.ui.title), "__THEME__": cfg.ui.theme, "__MINLEN__": str(int(cfg.ui.captcha_min_length)),
+              "__CREDIT__": credit}
     for key, value in values.items():  # theme is validated to light/dark/auto and the length to an int, so only the title needs escaping
         html = html.replace(key, value)
     return html.encode("utf-8")

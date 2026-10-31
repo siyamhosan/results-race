@@ -82,6 +82,7 @@ class Ui:
     title: str = "Results race"
     theme: str = "light"  # light | dark | auto
     captcha_min_length: int = 3
+    credit: str = "BazarLab by Siyam"  # small line at the bottom of the page; empty = none
 
 
 @dataclass

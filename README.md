@@ -1,5 +1,7 @@
 # results-race
 
+*From BazarLab by Siyam.*
+
 Exam results go live and every site slows to a crawl. **results-race** looks your students up on several
 mirror sites at once, shows you each captcha, and saves whichever site answers first.
 You type the captchas; everything else is automatic.
@@ -79,7 +81,7 @@ Unknown options and bad values are reported by name, never silently ignored.
 | `[server]` | `host`, `port`, `auth` (`user:password`), `allow_open` |
 | `[output]` | `dir` |
 | `[browser]` | `path`, `no_sandbox` |
-| `[ui]` | `title`, `theme` (`light`/`dark`/`auto`), `captcha_min_length` |
+| `[ui]` | `title`, `theme` (`light`/`dark`/`auto`), `captcha_min_length`, `credit` (the line at the bottom of the page; empty hides it) |
 | `[card]` | `enabled`, `logos`, `assets_dir`, header/title/footer texts, `show_fetch_time`, `png_scale` |
 | `[notify]` | `command`, run once a lane is ready |
 

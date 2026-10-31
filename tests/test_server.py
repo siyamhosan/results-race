@@ -94,6 +94,18 @@ class ServerTest(unittest.TestCase):
         self.assertIn("'dark'", page)
         self.assertNotIn("__", page.replace("__proto__", ""))  # every placeholder was filled
 
+    def test_credit_line_is_shown_by_default_and_can_be_changed_or_removed(self):
+        self.assertIn("BazarLab by Siyam", render_page(Config()).decode())
+        cfg = Config()
+        cfg.ui.credit = "Made by <me> & co"
+        page = render_page(cfg).decode()
+        self.assertIn("Made by &lt;me&gt; &amp; co", page)  # escaped like the title
+        self.assertNotIn("BazarLab", page)
+        cfg.ui.credit = ""
+        gone = render_page(cfg).decode()
+        self.assertNotIn("class=credit", gone)
+        self.assertNotIn("__", gone.replace("__proto__", ""))
+
     def test_login_is_enforced_when_configured_and_absent_when_not(self):
         cfg = Config()
         cfg.server.auth = "me:pw"

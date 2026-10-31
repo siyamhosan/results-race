@@ -9,6 +9,7 @@ description = "Race several exam-result sites at once while you type the captcha
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [{ name = "BazarLab by Siyam" }]
 dependencies = ["websockets>=13"]
 classifiers = [
   "Programming Language :: Python :: 3",

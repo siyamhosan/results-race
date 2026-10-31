@@ -37,7 +37,7 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 .s.done{cursor:pointer}.s.done:hover,.s.done:focus-visible{background:var(--idle);outline:none}
 .s .r{display:flex;align-items:center;gap:8px;min-width:0;font-weight:700}.s .r em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.s .r .gpa{flex:none;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--brand2);color:var(--brand)}.s .sub{grid-column:1/-1;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill{height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border-radius:99px}.p-done{background:var(--okbg);color:var(--ok)}.p-pending{background:var(--idle);color:var(--mut)}.p-inflight{background:var(--warnbg);color:var(--warn)}.p-failed{background:var(--badbg);color:var(--bad)}
-.time{font-size:12.5px;color:var(--mut);text-align:right}.empty{padding:30px;text-align:center;color:var(--mut)}
+.credit{text-align:center;color:var(--mut);font-size:12px;padding:16px 0 4px;letter-spacing:.02em}.time{font-size:12.5px;color:var(--mut);text-align:right}.empty{padding:30px;text-align:center;color:var(--mut)}
 #modal{position:fixed;inset:0;z-index:50;display:none;background:#0a1118b3;backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}#modal.on{display:flex;animation:fi .15s}
 @keyframes fi{from{opacity:0}}@keyframes up{from{transform:translateY(14px) scale(.985);opacity:0}}
 .dialog{background:var(--card);border-radius:20px;box-shadow:0 30px 80px #0007;width:min(1040px,100%);height:min(780px,100%);display:grid;grid-template-columns:minmax(0,1fr) 300px;overflow:hidden;animation:up .2s}
@@ -79,7 +79,8 @@ input#cap:focus{border-color:var(--brand);outline:none;background:var(--card)}.h
 <button id=newcap onclick="newCaptcha()" style="width:100%;margin-bottom:8px">New captcha</button>
 <input id=cap autofocus inputmode=numeric autocomplete=off placeholder="digits" aria-label="Captcha digits">
 <div class=hint>Enter to submit · Esc for a new captcha</div><div class=chips id=chips></div></div>
-<div class="card list"><div class=listhead><div class=tabs id=tabs></div><button id=allBtn onclick="dlAll()" title="Every finished student's A4 sheet as a PNG, in one zip"><span class=lg>Download all A4 PNGs</span><span class=sm>All PNGs</span> <b id=allN>0</b></button></div><div class=rows id=stu></div></div></div></div>
+<div class="card list"><div class=listhead><div class=tabs id=tabs></div><button id=allBtn onclick="dlAll()" title="Every finished student's A4 sheet as a PNG, in one zip"><span class=lg>Download all A4 PNGs</span><span class=sm>All PNGs</span> <b id=allN>0</b></button></div><div class=rows id=stu></div></div></div>
+__CREDIT__</div>
 <div id=modal role=dialog aria-modal=true aria-labelledby=mName onclick="if(event.target==modal)closeM()"><div class=dialog>
 <div class=preview id=paper><div id=pw><div class=skel id=skel></div><iframe id=frame title="Result sheet"></iframe></div></div>
 <aside class=side><button class="icon x" onclick="closeM()" aria-label="Close"><svg width=16 height=16 viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2.4 stroke-linecap=round><path d="M5 5l14 14M19 5L5 19"/></svg></button>
