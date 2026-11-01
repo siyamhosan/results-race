@@ -6,8 +6,10 @@ import asyncio
 import base64
 import json
 import socket
+import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -28,7 +30,10 @@ class App:
         self.base = f"http://127.0.0.1:{self.port}"
         self.proc = subprocess.Popen([sys.executable, "-m", "results_race", "demo", "--port", str(self.port),
                                       "--set", "card.png_scale=2", "--set", "ui.credit=BazarLab by Siyam"],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=ROOT)
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                     # a bare room: the photographer's own results-race.toml must not change the demo
+                                     cwd=tempfile.mkdtemp(), env={**os.environ, "HOME": tempfile.mkdtemp(),
+                                                                  "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "src"), os.environ.get("PYTHONPATH")]))})
 
     def call(self, path, body=None, raw=False):
         req = urllib.request.Request(self.base + path, data=None if body is None else json.dumps(body).encode())

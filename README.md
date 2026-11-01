@@ -44,8 +44,9 @@ You type the captchas; everything else is automatic.
     <td width="30%" valign="top"><img src="docs/img/app-phone.png" alt="The page on a phone"></td>
     <td width="70%" valign="top" align="center">
       <img src="docs/img/sheet-sample.png" alt="A sample A4 result sheet" width="430"><br>
-      <sub><b>The A4 sheet</b> (demo data): fonts embedded, logos optional, every text configurable, and a small
-      credit line at the bottom you can change or remove.
+      <sub><b>The A4 sheet</b> (demo data): <b>marks for every subject</b> when the result site publishes them (HSC 2026
+      does; a result with grades only just has no Marks column), fonts embedded, logos optional, every text configurable,
+      and a small credit line at the bottom you can change or remove.
       The download is a PNG (2382 x 3369 px by default; this picture is a smaller 2x export) named after
       the student and the result, e.g. <code>Fahim-Chowdhury_GPA-4.25_200004.png</code>.</sub>
     </td>
@@ -122,6 +123,7 @@ It works with no config at all: it starts empty and you add students with **Add 
 | **New captcha** (or Esc) | swap one unreadable captcha for a fresh one |
 | **Reload lanes** | fresh captchas on every ready lane, and rebuilds lanes stuck warming or cooling down (use it when a site hiccups; no restart needed). A lane mid-lookup is left alone |
 | **Add student** | look someone up for any exam and year; saved separately |
+| **Edit** (on each student) | fix a roll or registration number typed wrong: the student starts over, and a result saved under the old numbers is deleted |
 | **Reset failed** / **Reset all** | requeue failures / forget everything and delete saved results |
 | click a finished student | the A4 sheet, with PNG download and print |
 | **Download all A4 PNGs** | one zip with every finished student's A4 PNG (renders are cached, so a second click is instant) |
@@ -198,6 +200,10 @@ out/manual.json                 the list of students added in the page (they com
 Restarting skips anyone already saved. **Reset all** in the page deletes the saved results.
 
 ## The result sheet
+
+The sheet shows each subject's marks, grade and grade point, whenever the site's answer carries marks (as HSC 2026 does:
+`101-102:171=A+`, two papers of a subject sharing one code), plus a 4th-subject tag and the converted marks. Results with grades only
+(such as SSC 2024) get no Marks column.
 
 Downloaded PNGs are named after the student and the result, e.g. `Md-Rahim-Uddin_GPA-4.22_100001.png`
 (`..._Not-Passed_...` for a fail). Non-Latin names are kept, and the zip never has two files with one name.

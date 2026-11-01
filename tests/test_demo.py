@@ -31,7 +31,7 @@ class Client:
         assert ctype.startswith("image/"), ctype  # the app only accepts an image
         return captcha_digits(body.decode())
 
-    def lookup(self, roll, reg, captcha, exam="ssc", year="2024"):
+    def lookup(self, roll, reg, captcha, exam="hsc", year="2026"):
         data = urllib.parse.urlencode({"board": "demo", "exam": exam, "year": year, "result_type": "1", "roll": roll,
                                        "reg": reg, "captcha": captcha}).encode()
         with self.opener.open(self.base + "/v2/getres", data, timeout=10) as r:
@@ -113,16 +113,16 @@ class DemoDataTest(unittest.TestCase):
         self.assertGreaterEqual(len(rolls), 10)
 
     def test_results_are_deterministic_and_include_a_failure(self):
-        results = [demo_result(r, g, "ssc", "2024") for r, g, _ in DEMO_STUDENTS]
-        self.assertEqual(results, [demo_result(r, g, "ssc", "2024") for r, g, _ in DEMO_STUDENTS])
+        results = [demo_result(r, g, "hsc", "2026") for r, g, _ in DEMO_STUDENTS]
+        self.assertEqual(results, [demo_result(r, g, "hsc", "2026") for r, g, _ in DEMO_STUDENTS])
         gpas = [x["res"]["res_detail"] for x in results]
         self.assertTrue(any(g == "GPA=0.00" for g in gpas))
         self.assertTrue(sum(g != "GPA=0.00" for g in gpas) >= 8)
 
     def test_every_demo_result_renders_as_a_sheet(self):
         for roll, reg, name in DEMO_STUDENTS:
-            rec = {"site": "mirror-a.localhost", "ms": 900, "result": demo_result(roll, reg, "ssc", "2024")}
-            html = render(rec, "ssc", 2024)
+            rec = {"site": "mirror-a.localhost", "ms": 900, "result": demo_result(roll, reg, "hsc", "2026")}
+            html = render(rec, "hsc", 2026)
             self.assertIn(name, html)
 
     def test_apply_demo_points_the_config_at_the_mirrors_and_lists_the_students(self):

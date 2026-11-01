@@ -26,35 +26,50 @@ DEMO_STUDENTS = [
     ("200011", "2200000011", "LABONI DAS"), ("200012", "2200000012", "SHAKIB MONDAL"),
 ]
 FAILING = "200008"  # one student who did not pass, so the sheet's "not passed" look is part of the demo
-SUBJECTS = [("101", "BANGLA"), ("107", "ENGLISH"), ("109", "MATHEMATICS"), ("111", "ISLAM AND MORAL EDUCATION"),
-            ("150", "BANGLADESH AND GLOBAL STUDIES"), ("136", "PHYSICS"), ("137", "CHEMISTRY"), ("138", "BIOLOGY"),
-            ("154", "INFORMATION AND COMMUNICATION TECHNOLOGY"), ("126", "HIGHER MATHEMATICS")]
-CO_CURRICULAR = [("147", "PHYSICAL EDUCATION, HEALTH & SPORTS"), ("156", "CAREER EDUCATION")]
+# (paper codes, name, full marks): an HSC science set. Two-paper subjects share a code like "101-102", as on the real site.
+SUBJECTS = [("101-102", "BANGLA", 200), ("107-108", "ENGLISH", 200), ("275", "INFORMATION & COMMUNICATION TECHNOLOGY", 100),
+            ("174-175", "PHYSICS", 200), ("176-177", "CHEMISTRY", 200), ("178-179", "BIOLOGY", 200)]
+FOURTH = ("265-266", "HIGHER MATHEMATICS", 200)
 POINTS = {"A+": 5, "A": 4, "A-": 3.5, "B": 3, "C": 2, "D": 1, "F": 0}
 BAD_CAPTCHA = "Could not validate your provided Security Key / CAPTCHA. Please check and try again."
 NOT_FOUND = "Result not found. Please check the roll and registration number."
 
 
+def grade_of(marks, full):
+    pct = 100 * marks / full
+    return next(g for lo, g in [(80, "A+"), (70, "A"), (60, "A-"), (50, "B"), (40, "C"), (33, "D"), (0, "F")] if pct >= lo)
+
+
 def demo_result(roll, reg, exam, year):
-    """The made-up result for a demo student (None if roll and reg do not match one). Same input, same output."""
+    """The made-up result for a demo student (None if roll and reg do not match one). Same input, same output.
+    Shaped like an HSC 2026 answer: marks before each grade, `showmarks: 1`, converted marks and a 4th subject."""
     found = next((s for s in DEMO_STUDENTS if s[0] == str(roll) and s[1] == str(reg)), None)
     if not found:
         return None
     rnd = random.Random(int(roll))
-    grades = [rnd.choices(["A+", "A", "A-", "B", "C"], weights=[5, 6, 3, 2, 1])[0] for _ in SUBJECTS]
+    def marks(full, low=0.52, high=0.93):
+        return round(full * rnd.uniform(low, high))
+    got = [marks(full) for _, _, full in SUBJECTS]
     if roll == FAILING:
-        grades[rnd.randrange(len(grades))] = "F"
-    gpa = 0.0 if "F" in grades else round(sum(POINTS[g] for g in grades) / len(grades), 2)
-    ca = [rnd.choice(["A+", "A"]) for _ in CO_CURRICULAR]
-    def show(pairs, gs):
-        return ",".join(f"{code}:{g:<2}" for (code, _), g in zip(pairs, gs))
+        i = rnd.randrange(len(got))
+        got[i] = round(SUBJECTS[i][2] * 0.2)  # well under the pass mark
+    fourth = marks(FOURTH[2])
+    grades = [grade_of(m, f) for m, (_, _, f) in zip(got, SUBJECTS)]
+    failed = "F" in grades
+    points = [POINTS[g] for g in grades]
+    gpa = 0.0 if failed else min(5.0, round((sum(points) + max(0, POINTS[grade_of(fourth, FOURTH[2])] - 2)) / len(points), 2))
+    tot_full = sum(f for _, _, f in SUBJECTS) + FOURTH[2] * 0.6
+    converted = 0.0 if failed else (sum(got) + max(0, fourth - FOURTH[2] * 0.4)) / tot_full * 1000
+    entries = [f"{code}:{m:03d}={g}" for (code, _, _), m, g in zip(SUBJECTS, got, grades)]
+    entries.append(f"{FOURTH[0]}:{fourth:03d}={grade_of(fourth, FOURTH[2])}")
+    names = [(c, n) for codes, n, _ in SUBJECTS + [FOURTH] for c in codes.split("-")]
     return {"status": 0, "msg": "Success", "res": {
         "name": found[2], "fname": "A DEMO FATHER", "mname": "A DEMO MOTHER", "roll_no": roll, "regno": reg,
-        "session": "2022-23", "res_detail": f"GPA={gpa:.2f}", "board_name": "DEMO", "stud_group": "SCIENCE",
-        "stud_type": "REGULAR", "dob": f"{1 + int(roll) % 27:02d}-0{1 + int(roll) % 9}-2008", "inst_name": "SAMPLE HIGH SCHOOL",
-        "t_name": "SADAR", "z_name": "SAMPLE", "display_details": show(SUBJECTS, grades),
-        "display_details_ca": show(CO_CURRICULAR, ca)},
-        "sub_details": [{"SUB_CODE": c, "SUB_NAME": n} for c, n in SUBJECTS + CO_CURRICULAR]}
+        "session": "2023-24", "res_detail": f"GPA={gpa:.2f}", "board_name": "DEMO", "stud_group": "SCIENCE",
+        "stud_type": "REGULAR", "dob": f"{1 + int(roll) % 27:02d}-0{1 + int(roll) % 9}-2008", "inst_name": "SAMPLE COLLEGE",
+        "tot_full": str(round(tot_full)), "conv_1000": f"{converted:.2f}", "sub4th": FOURTH[0],
+        "t_name": "SADAR", "z_name": "SAMPLE", "display_details": ",".join(entries), "display_details_ca": ""},
+        "sub_details": [{"SUB_CODE": c, "SUB_NAME": n} for c, n in names], "showmarks": 1, "totalonly": 1, "hidefailed": 1}
 
 
 def captcha_svg(digits, rnd):
@@ -174,7 +189,7 @@ def apply_demo(cfg, workdir):
     cfg.students.file = str(workdir / "students.json")
     cfg.output.dir = str(workdir / "out")
     cfg.proxies.file = ""
-    cfg.run.board, cfg.run.exam, cfg.run.year = "demo", "ssc", "2024"
+    cfg.run.board, cfg.run.exam, cfg.run.year = "demo", "hsc", "2026"
     cfg.card.logos = False
     cfg.card.header_line = "Demonstration - every name and result here is made up"
     cfg.card.board_title = "Sample Examination Board"

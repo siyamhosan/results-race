@@ -66,13 +66,13 @@ class EndToEndTest(unittest.IsolatedAsyncioTestCase):
         import json
         from results_race.card import render
         from results_race.demo import demo_result
-        res = demo_result(*DEMO_STUDENTS[0][:2], "ssc", "2024")
+        res = demo_result(*DEMO_STUDENTS[0][:2], "hsc", "2026")
         crowded = json.loads(json.dumps(res))
         extra = [(str(300 + i), f"EXTRA SUBJECT NUMBER {i}") for i in range(4)]
         crowded["sub_details"] += [{"SUB_CODE": c, "SUB_NAME": n} for c, n in extra]
         crowded["res"]["display_details"] += "," + ",".join(f"{c}:A+" for c, _ in extra)
         for result in (res, crowded):
-            html = render({"site": "http://m.localhost:1", "ms": 900, "result": result}, "ssc", 2024, self.engine.card_style)
+            html = render({"site": "http://m.localhost:1", "ms": 900, "result": result}, "hsc", 2026, self.engine.card_style)
             tab = await self.browser.new_tab("data:text/html;charset=utf-8;base64," + base64.b64encode(html.encode()).decode())
             await asyncio.sleep(0.8)
             m = json.loads(await tab.eval("""(()=>{const r=e=>{const b=document.querySelector(e).getBoundingClientRect();return [b.top,b.bottom]};
